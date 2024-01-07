@@ -5,6 +5,8 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   srcDir: "./src/",
 
+  css: ["~/assets/css/main.css"],
+
   modules: [
     "@nuxtjs/tailwindcss",
     "@hebilicious/authjs-nuxt",
