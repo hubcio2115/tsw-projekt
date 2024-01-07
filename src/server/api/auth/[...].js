@@ -18,4 +18,4 @@ export const authOptions = {
 
 export default NuxtAuthHandler(authOptions, runtimeConfig);
 // If you don't want to pass the full runtime config,
-//  you can pass something like this: { public: { authJs: { baseUrl: "" } } }
+// you can pass something like this: { public: { authJs: { baseUrl: "" } } }
