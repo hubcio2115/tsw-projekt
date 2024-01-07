@@ -1,4 +1,12 @@
 {
-  // https://nuxt.com/docs/guide/concepts/typescript
-  "extends": "./.nuxt/tsconfig.json"
+  "$schema": "https://json.schemastore.org/jsconfig",
+  "extends": "./.nuxt/tsconfig.json",
+  "compilerOptions": {
+    "checkJs": true,
+    "moduleDetection": "force",
+
+    "noUncheckedIndexedAccess": true,
+    "lib": ["es2022", "dom", "dom.iterable"]
+  },
+  "exclude": ["node_modules", "./src/server/**"]
 }
