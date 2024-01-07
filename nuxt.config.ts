@@ -1,16 +1,35 @@
+import { env } from "./src/env.mjs";
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   devtools: { enabled: true },
-  modules: ["@nuxtjs/tailwindcss", "shadcn-nuxt"],
-  shadcn: {
-    /**
-     * Prefix for all the imported component
-     */
-    prefix: "",
-    /**
-     * Directory that the component lives in.
-     * @default "./components/ui"
-     */
-    componentDir: "./components/ui",
+  srcDir: "./src/",
+
+  modules: [
+    "@nuxtjs/tailwindcss",
+    "@hebilicious/authjs-nuxt",
+    [
+      "@nuxtjs/eslint-module",
+      {
+        lintOnStart: false,
+      },
+    ],
+  ],
+
+  alias: {
+    cookie: "cookie",
+  },
+
+  runtimeConfig: {
+    authJs: {
+      secret: env.NUXTAUTH_SECRET,
+    },
+
+    public: {
+      authJs: {
+        baseUrl: env.NUXT_PUBLIC_NUXTAUTH_URL,
+        verifyClientOnEveryRequest: true,
+      },
+    },
   },
 });
