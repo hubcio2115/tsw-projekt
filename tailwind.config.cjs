@@ -4,6 +4,8 @@ const animate = require("tailwindcss-animate");
 module.exports = {
   darkMode: ["class"],
 
+  plugins: [animate],
+
   theme: {
     container: {
       center: true,
@@ -79,5 +81,4 @@ module.exports = {
       },
     },
   },
-  plugins: [animate],
 };
