@@ -10,12 +10,12 @@ export default defineNuxtConfig({
   modules: [
     "@nuxtjs/tailwindcss",
     "@hebilicious/authjs-nuxt",
-    [
-      "@nuxtjs/eslint-module",
-      {
-        lintOnStart: false,
-      },
-    ],
+    // [
+    //   "@nuxtjs/eslint-module",
+    //   {
+    //     lintOnStart: false,
+    //   },
+    // ],
   ],
 
   alias: {
