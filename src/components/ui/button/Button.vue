@@ -1,11 +1,12 @@
 <script setup>
 import { cva } from "class-variance-authority";
+import { Loader2 } from "lucide-vue-next";
 import { Primitive } from "radix-vue";
 
 import { cn } from "~/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 gap-1",
   {
     variants: {
       variant: {
@@ -36,7 +37,7 @@ const buttonVariants = cva(
 /**
  * @typedef {import("class-variance-authority").VariantProps<buttonVariants>} ButtonVariantProps
  * @typedef {{as: "button"; asChild: boolean; variant: ButtonVariantProps["variant"]; size: ButtonVariantProps["size"]}} ButtonProps
- * @type ButtonProps
+ * @type ButtonProps & {disabled: boolean; spinner: boolean}
  */
 defineProps({
   variant: {
@@ -66,6 +67,8 @@ defineProps({
   },
   as: { type: String, required: false, default: "button" },
   asChild: { type: Boolean, required: false },
+  spinner: { type: Boolean, required: false, default: false },
+  disabled: { type: Boolean, required: false, default: false },
 });
 </script>
 
@@ -79,7 +82,10 @@ defineProps({
         /** @type {string} */ ($attrs.class) ?? '',
       )
     "
+    :disabled="disabled || spinner"
   >
     <slot />
+
+    <Loader2 v-if="spinner" class="animate-spin" :size="15" />
   </Primitive>
 </template>
