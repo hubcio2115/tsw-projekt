@@ -51,3 +51,7 @@
   src: url("/fonts/Geist/Geist-UltraLight.woff2") format("woff2") 100;
   font-display: swap;
 }
+
+* {
+  min-width: 0;
+}
