@@ -9,7 +9,6 @@ module.exports = {
     node: true,
   },
   extends: [
-    "eslint:recommended",
     "plugin:@typescript-eslint/strict",
     "plugin:vue/vue3-recommended",
     "plugin:prettier/recommended",
@@ -17,7 +16,7 @@ module.exports = {
   rules: {},
   overrides: [
     {
-      files: ["*.ts", "*.tsx", "*.mts", "*.cts", "*.vue"],
+      files: ["*.js", ".jsx", "*.ts", "*.tsx", "*.mts", "*.cts", "*.vue"],
       rules: {
         // The core 'no-unused-vars' rules (in the eslint:recommended ruleset)
         // does not work with type definitions.
