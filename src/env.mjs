@@ -8,6 +8,13 @@ export const env = createEnv({
      * You can generate one with `openssl rand -base64 32`
      */
     NUXTAUTH_SECRET: z.string(),
+    NUXTAUT_URL: z.string().optional(),
+
+    DB_USERNAME: z.string(),
+    DB_PASSWORD: z.string(),
+
+    GOOGLE_CLIENT_ID: z.string(),
+    GOOGLE_CLIENT_SECRET: z.string(),
   },
   client: {
     /**
