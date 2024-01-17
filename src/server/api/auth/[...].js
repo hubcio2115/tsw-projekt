@@ -23,15 +23,11 @@ export const authOptions = {
   trustHost: true,
 
   callbacks: {
-    jwt({ token, user }) {
-      console.log("user:", user);
-      console.log("token:", token);
-
+    jwt({ token }) {
       return token;
     },
 
     session({ session }) {
-      console.log(session);
       return session;
     },
   },
