@@ -1,54 +1,20 @@
 {
-  "name": "nuxt-app",
+  "name": "projekt",
   "private": true,
-  "type": "module",
   "scripts": {
-    "build": "nuxt build",
-    "dev": "nuxt dev",
-    "generate": "nuxt generate",
-    "preview": "nuxt preview",
-    "postinstall": "nuxt prepare",
-    "format": "prettier -w ./src/**/*"
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "devDependencies": {
-    "@nuxt/image": "latest",
-    "@nuxtjs/eslint-module": "^4.1.0",
-    "@nuxtjs/tailwindcss": "latest",
-    "@total-typescript/ts-reset": "^0.5.1",
-    "@trivago/prettier-plugin-sort-imports": "^4.3.0",
-    "@typescript-eslint/eslint-plugin": "^6.18.0",
-    "@typescript-eslint/parser": "^6.18.0",
-    "eslint": "^8.56.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-prettier": "^5.1.2",
-    "eslint-plugin-vue": "^9.19.2",
-    "nuxt": "^3.9.0",
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
     "prettier": "^3.1.1",
-    "prettier-plugin-tailwindcss": "^0.5.11",
-    "shadcn-nuxt": "^0.8.6",
-    "typescript": "^5.3.3",
-    "vue": "^3.4.5",
-    "vue-eslint-parser": "^9.3.2",
-    "vue-router": "^4.2.5"
+    "turbo": "latest"
   },
-  "dependencies": {
-    "@auth/core": "^0.20.0",
-    "@auth/neo4j-adapter": "^1.1.2",
-    "@t3-oss/env-nuxt": "^0.7.1",
-    "@tanstack/vue-query": "^5.17.8",
-    "@tanstack/vue-query-devtools": "^5.17.8",
-    "@vue-hooks-form/core": "^0.0.19",
-    "@vue-hooks-form/zod": "^0.0.19",
-    "@vueuse/core": "^10.7.1",
-    "argon2": "^0.31.2",
-    "class-variance-authority": "^0.7.0",
-    "clsx": "^2.1.0",
-    "lucide-vue-next": "^0.306.0",
-    "neo4j-driver": "^5.16.0",
-    "next-auth": "^4.24.5",
-    "radix-vue": "^1.2.6",
-    "tailwind-merge": "^2.2.0",
-    "tailwindcss-animate": "^1.0.7",
-    "zod": "^3.22.4"
+  "packageManager": "pnpm@8.9.0",
+  "engines": {
+    "node": ">=18"
   }
 }
