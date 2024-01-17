@@ -8,14 +8,14 @@ export default defineNuxtConfig({
   css: ["~/assets/css/main.css"],
 
   modules: [
-    "@nuxtjs/tailwindcss",
-    "@hebilicious/authjs-nuxt",
-    // [
+    "@nuxtjs/tailwindcss", // [
     //   "@nuxtjs/eslint-module",
     //   {
     //     lintOnStart: false,
     //   },
     // ],
+    ["@hebilicious/authjs-nuxt", { guestRedirectTo: "/auth" }],
+    "@nuxt/image",
   ],
 
   alias: {
