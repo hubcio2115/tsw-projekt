@@ -5,11 +5,11 @@ W oparciu o (i z wykorzystaniem) `Node.js` i biblioteki `Socket.io` oraz `Vue.js
 ## Wersja na <= 3.5
 
 - Autoryzacja
-  - [ ] Rejestracja w serwisie
-  - [ ] Logowanie do serwera
+  - [x] Rejestracja w serwisie
+  - [x] Logowanie do serwera
 - Profil użytkownika
   - [ ] Tworzenie wizytówki użytkownika konta zawierającej:
-    - [ ] „awatar”
+    - [x] „awatar”
     - [ ] wizytówka określa co inni użytkownicy widzą na nasz temat
 - [ ] Obserwowanie innych użytkowników
 - [ ] Tworzenie postów i wątków (zamieszczamy w nich wyłącznie wpisy tekstowe)
