@@ -19,7 +19,7 @@ const tab = /** @type {Ref<"login" | "register">} */ (
 </script>
 
 <template>
-  <div class="flex min-h-screen justify-center pt-96">
+  <div class="flex justify-center pt-96">
     <Tabs :default-value="tab" class="w-[400px]">
       <TabsList class="grid w-full grid-cols-2">
         <TabsTrigger value="login"> Login </TabsTrigger>
