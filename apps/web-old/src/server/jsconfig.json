@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/jsconfig",
+  "extends": "../../.nuxt/tsconfig.server.json",
+  "compilerOptions": {
+    "checkJs": true,
+    "moduleDetection": "force",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "noUncheckedIndexedAccess": true,
+    "lib": ["es2022"]
+  }
+}

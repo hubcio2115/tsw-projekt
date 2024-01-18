@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json.schemastore.org/jsconfig",
+  "extends": "@repo/typescript-config/web.json",
+  "compilerOptions": {
+    "checkJs": true,
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["./src/*"]
+    }
+  },
+  "exclude": ["node_modules"]
+}
