@@ -73,11 +73,17 @@ defineProps({
 </script>
 
 <template>
-  <Primitive :as="as" :as-child="asChild" :class="cn(
-    buttonVariants({ variant, size }),
-          /** @type {string} */($attrs.class) ?? '',
-  )
-    " :disabled="disabled || spinner">
+  <Primitive
+    :as="as"
+    :as-child="asChild"
+    :class="
+      cn(
+        buttonVariants({ variant, size }),
+        /** @type {string} */ ($attrs.class) ?? '',
+      )
+    "
+    :disabled="disabled || spinner"
+  >
     <slot />
 
     <Loader2 v-if="spinner" class="animate-spin" :size="15" />

@@ -6,5 +6,3 @@ export const driver = neo4j.driver(
   "bolt://localhost",
   neo4j.auth.basic(env.DB_USERNAME, env.DB_PASSWORD),
 );
-
-export const neo4jSession = driver.session();

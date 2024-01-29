@@ -1,29 +1,25 @@
 import { z } from "zod";
 
-import { neo4jSession } from "./db";
+import { postSchema } from "~/validators/post.js";
+import { userSchema } from "~/validators/user.js";
 
-const postSchema = z.object({
-  id: z.string().uuid(),
-  content: z.string(),
-});
-
-/** @typedef {z.infer<typeof postSchema>} Post */
+import { driver } from "./db.js";
 
 /**
- * @param {import("~/lib/validators/user").User["id"]} userId
- * @param {Omit<Post, "id">} newPost
+ * @param {string} userId
+ * @param {string} content
  */
-export async function createPost(userId, { content }) {
+export async function createPost(userId, content) {
+  const session = driver.session();
+
   const res = (
-    await neo4jSession.run(
-      `
-    MERGE (p:Post {id: $id})
-    ON CREATE SET p.createdAt = datetime()
-    SET p.content = $content
-    MATCH (u:User {id: $userId})
-    Merge (u)-[:POSTED]->(p)
-    RETURN p;
-`,
+    await session.run(
+      `MERGE (p:Post { id: $id })
+      ON CREATE SET p.createdAt = datetime(), p.content = $content
+      WITH p
+      MATCH (u:User { id: $userId })
+      MERGE (u)-[:POSTED]->(p)
+      RETURN { id: p.id, content: p.content } as post;`,
       {
         id: crypto.randomUUID(),
         content,
@@ -32,10 +28,42 @@ export async function createPost(userId, { content }) {
     )
   ).records.at(0);
 
-  const post = postSchema.safeParse({
-    id: res?.get("p.id"),
-    content: res?.get("p.content"),
-  });
+  session.close();
+
+  const post = postSchema.safeParse(res?.get("post"));
+
+  return post;
+}
+
+/**
+ * @param {string} userId
+ * @param {string} postId
+ * @param {string} content
+ */
+export async function createQuote(userId, postId, content) {
+  const session = driver.session();
+
+  const res = (
+    await session.run(
+      `MERGE (p:Post { id: $id })
+      ON CREATE SET p.createdAt = datetime(), p.content = $content
+      WITH p
+      MATCH (u:User { id: $userId })-[:POSTED]->(p1:Post {id: $postId})
+      MERGE (u)-[:POSTED]->(p)
+      MERGE (p)-[:QUOTES]->(p1)
+      RETURN { id: p.id, content: p.content } as post;`,
+      {
+        id: crypto.randomUUID(),
+        content,
+        userId,
+        postId,
+      },
+    )
+  ).records.at(0);
+
+  session.close();
+
+  const post = postSchema.parse(res?.get("post"));
 
   return post;
 }
@@ -44,80 +72,213 @@ export async function createPost(userId, { content }) {
  * @param {string} id
  */
 export async function getPostById(id) {
+  const session = driver.session();
+
   const res = (
-    await neo4jSession.run("MATCH (p:Post {id: $id}) RETURN p", {
-      id,
-    })
-  ).records.at(0);
-
-  const post = postSchema.safeParse({
-    id: res?.get("p.id"),
-    content: res?.get("p.content"),
-  });
-
-  return post;
-}
-
-/**
- * @param {import("~/lib/validators/user").User["id"]} userId
- * @param {Post["id"]} postId
- * @param {Omit<Post, "id">} newPost
- * @returns {Promise<z.SafeParseReturnType<Post, Post>>} newPost
- */
-export async function commentOnPost(userId, postId, { content }) {
-  const newPost = await createPost(userId, { content });
-
-  if (!newPost.success) return newPost;
-
-  /** @type {string} */
-  const newPostId = newPost.data.id;
-
-  await neo4jSession.run(
-    "MERGE (p1:Post {id: $postId})-[:COMMENTED]->(p2:Post {id: $newPostId}) RETURN p2",
-    { postId, newPostId },
-  );
-
-  return newPost;
-}
-
-/**
- * @param {import("~/lib/validators/user").User["id"]} userId
- * @param {Post["id"]} postId
- * @param {Omit<Post, "id">} newPost
- * @returns {Promise<z.SafeParseReturnType<Post, Post>>} newPost
- */
-export async function quotePost(userId, postId, { content }) {
-  const newPost = await createPost(userId, { content });
-
-  if (!newPost.success) return newPost;
-
-  /** @type {string} */
-  const newPostId = newPost.data.id;
-
-  await neo4jSession.run(
-    "MERGE (p1:Post {id: $postId})-[:QUOTED]->(p2:Post {id: $newPostId}) RETURN p2",
-    { postId, newPostId },
-  );
-
-  return newPost;
-}
-
-/**
- * @param {Post["id"]} postId
- * @returns {Promise<z.SafeParseReturnType<Post, Post>>} newPost
- */
-export async function deletePost(postId) {
-  const res = (
-    await neo4jSession.run(
-      `MATCH (p:Post {id: $id}) DETACH DELETE p RETURN p;`,
-      { postId },
+    await session.run(
+      `MATCH (p:Post { id: $id })<-[:POSTED]-(u:User)
+      OPTIONAL MATCH (p)-[:QUOTES]->(p1:Post)
+      OPTIONAL MATCH (p)-[:REPLIES*1..]->(p2)
+      OPTIONAL MATCH (p2)<-[:POSTED]-(u2:User)
+      WITH p, p1, p2, u, u2
+      OPTIONAL MATCH (p1)<-[:POSTED]-(u1:User)
+      WITH p, p1, p2, u, u1, u2
+      RETURN { 
+        id: p.id, 
+        content: p.content 
+      } AS post,
+      { 
+        id: u.id, 
+        firstName: u.firstName, lastName: u.lastName, username: u.username, 
+        image: u.image 
+      } AS user, 
+      CASE 
+        WHEN p1.id IS NOT NULL AND u1.id IS NOT NULL 
+        THEN { 
+          id: p1.id,
+          content: p1.content, 
+          user: { id: u1.id, firstName: u.firstName, lastName: u.lastName, username: u1.username, image: u1.image } 
+        }
+        ELSE NULL 
+      END AS quote,
+      COLLECT(DISTINCT { 
+        reply: { id: p2.id, content: p2.content }, 
+        user: { id: u2.id, firstName: u.firstName, lastName: u.lastName, username: u2.username, image: u2.image }
+      }) AS replies;`,
+      {
+        id,
+      },
     )
   ).records.at(0);
 
-  const post = postSchema.safeParse({
-    id: res?.get("p.id"),
-    content: res?.get("p.content"),
+  const replies = res?.get("replies");
+
+  const firstReply = replies.at(0);
+
+  if (firstReply?.reply?.id !== null) {
+    const res = (
+      await session.run(
+        `MATCH (p:Post { id: $postId })<-[:POSTED]-(u:User)
+        OPTIONAL MATCH (p)-[:QUOTES]->(p1)
+        OPTIONAL MATCH (p1)<-[:POSTED]-(u1)
+        WITH p, u, p1, u1
+        RETURN
+        CASE
+          WHEN p1.id IS NOT NULL AND u1.id IS NOT NULL
+          THEN {
+            reply: {
+              id: p.id,
+              content: p.content,
+              quotedPost: {
+                id: p1.id,
+                content: p1.content,
+                user: { id: u1.id, firstName: u.firstName, lastName: u.lastName, username: u1.username, image: u1.image } 
+              }
+            },
+            user: { id: u.id, firstName: u.firstName, lastName: u.lastName, username: u.username, image: u.image } 
+          }
+          ELSE NULL
+        END as quote;`,
+        {
+          postId: firstReply.reply.id,
+        },
+      )
+    ).records.at(0);
+
+    const quote = res?.get("quote");
+
+    if (quote !== null) {
+      replies[0] = quote;
+    }
+  }
+
+  session.close();
+
+  const quotedPost = res?.get("quotedPost");
+
+  const post = postSchema.parse({ ...res?.get("post"), quotedPost });
+
+  return {
+    post,
+    replies: replies[0]?.reply?.id !== null ? replies : null,
+  };
+}
+
+/**
+ * @param {string} id
+ */
+export async function getPostByIdWithUser(id) {
+  const session = driver.session();
+
+  const res = (
+    await session.run(
+      `MATCH (p:Post { id: $id })<-[:POSTED]-(u:User)
+      OPTIONAL MATCH (p)-[:QUOTES]->(p1:Post)
+      OPTIONAL MATCH (p1)<-[:POSTED]-(u1:User)
+      RETURN { id: p.id, content: p.content } as post,
+      {
+        id: p1.id, 
+        content: p1.content,
+        user: { id: u1.id, firstName: u.firstName, lastName: u.lastName, username: u.username, image: u.image }
+      } as quotedPost,
+      { id: u.id, firstName: u.firstName, lastName: u.lastName, username: u.username, image: u.image } as user`,
+      {
+        id,
+      },
+    )
+  ).records.at(0);
+
+  session.close();
+
+  const user = userSchema.parse(res?.get("user"));
+
+  const quotedPost = res?.get("quotedPost");
+
+  const post = postSchema.parse({
+    ...res?.get("post"),
+    quotedPost: quotedPost.id ? quotedPost : null,
   });
 
-  return post;
+  return { post, user };
+}
+
+/**
+ * @param {string} userId
+ * @param {string} postId
+ * @param {string} content
+ */
+export async function replyToPost(userId, postId, content) {
+  const session = driver.session();
+
+  const res = (
+    await session.run(
+      `MATCH (p:Post { id: $postId })
+    MATCH (u:User { id: $userId })
+    WITH p, u
+    MERGE (p1:Post { id: $newPostId}) 
+    ON CREATE SET p1.createdAt = datetime(), p1.content = $content
+    MERGE (p1)<-[:POSTED]-(u)
+    MERGE (p)<-[:REPLIES]-(p1)
+    RETURN { id: p1.id, content: p1.content } as post,
+    { id: u.id, username: u.username, image: u.image } as user;`,
+      {
+        postId,
+        userId,
+        newPostId: crypto.randomUUID(),
+        content,
+      },
+    )
+  ).records.at(0);
+
+  session.close();
+
+  const user = userSchema.parse(res?.get("user"));
+
+  const post = postSchema.parse(res?.get("post"));
+
+  return {
+    user,
+    post,
+  };
+}
+
+/**
+ * @param {string} postId
+ */
+export async function getPostReplies(postId) {
+  const session = driver.session();
+
+  const res = (
+    await session.run(
+      `MATCH (p:Post { id: $postId })<-[:REPLIES]-(p1)
+      MATCH (p1)<-[:POSTED]-(u)
+      RETURN { id: p1.id, content: p1.content } as post,
+      { id: u.id, image: u.image, firstName: u.firstName, lastName: u.lastName, username: u.username } as user;`,
+      { postId },
+    )
+  ).records;
+
+  session.close();
+
+  const posts = res.map((entry) => {
+    const user = entry.get("user");
+
+    const post = entry.get("post");
+
+    return {
+      user,
+      post,
+    };
+  });
+
+  const parsedPosts = z
+    .array(
+      z.object({
+        user: userSchema,
+        post: postSchema,
+      }),
+    )
+    .safeParse(posts);
+
+  return parsedPosts;
 }

@@ -7,6 +7,7 @@ export const userSchema = z.object({
   firstName: z.string(),
   lastName: z.string(),
   password: z.string().optional(),
+  bio: z.string().optional(),
 });
 
 /** @typedef {z.infer<typeof userSchema>} User */

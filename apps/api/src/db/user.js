@@ -1,83 +1,331 @@
-import { hash } from "argon2";
+import { z } from "zod";
 
+import { postSchema } from "~/validators/post.js";
 import { userSchema } from "~/validators/user.js";
 
-import { neo4jSession } from "./db.js";
+import { driver } from "./db.js";
 
 /**
- * @param {string} id
+ * @param {string} name
  */
-export async function getUserById(id) {
-  const query = await neo4jSession.run(
-    `MATCH (u:User { id: $id }) RETURN u.id, u.username, u.email`,
-    { id },
-  );
+export async function getUserByName(name) {
+  const session = driver.session();
 
-  const record = query.records.at(0);
+  const result = (
+    await session.run(
+      `MATCH (u:User { name: $name })
+      RETURN {
+        id: u.id,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        username: u.username,
+        password: u.password, 
+      } as user;`,
+      { name },
+    )
+  ).records.at(0);
 
-  const userData = {
-    id: record?.get("u.id"),
-    username: record?.get("u.username"),
-    email: record?.get("u.email"),
-  };
+  session.close();
 
-  const optionalUser = userSchema.safeParse(userData);
+  const userData = result?.get("user");
 
-  return optionalUser;
+  return userSchema.safeParse(userData);
 }
 
 /**
- * @param {string} username
+ * @param {string} userId
  */
-export async function getUserByUsername(username) {
-  const query = await neo4jSession.run(
-    `MATCH (u:User { username: $username }) RETURN u.id, u.username, u.email`,
-    { username },
-  );
+export async function getUserById(userId) {
+  const session = driver.session();
 
-  const record = query.records.at(0);
+  const result = (
+    await session.run(
+      `MATCH (u:User { id: $userId })
+      RETURN {
+        id: u.id,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        username: u.username,
+        bio: u.bio
+      } AS user;`,
+      { userId },
+    )
+  ).records.at(0);
 
-  const userData = {
-    id: record?.get("u.id"),
-    username: record?.get("u.username"),
-    email: record?.get("u.email"),
-  };
+  session.close();
 
-  const optionalUser = userSchema.safeParse(userData);
-
-  return optionalUser;
+  return userSchema.safeParse(result?.get("user"));
 }
 
 /**
- * @param {import("~/validators/user.js").AuthUser} newUser
+ * @param {Omit<import('~/validators/user.js').User, "id">} newUser
  */
-export async function createUser({ name, password, email }) {
-  const hashedPassword = await hash(password);
+export async function createUser({
+  lastName,
+  firstName,
+  username,
+  email,
+  password,
+}) {
+  const session = driver.session();
 
-  await neo4jSession.run(
-    "MERGE (u:User {id: $id, email: $email, password: $password, username: $name})",
-    { id: crypto.randomUUID(), name, password: hashedPassword, email },
-  );
+  const result = (
+    await session.run(
+      `MERGE (u:User { id: $id })
+    ON CREATE SET u.createdAt = datetime(),
+    u.firstName = $firstName, 
+    u.lastName = $lastName,
+    u.username = $username,
+    u.email = $email,
+    u.password = $password
+    RETURN { id: u.id, firstName: u.firstName, lastName: u.lastName, email: u.email, username: u.username } as user;
+    `,
+      {
+        id: crypto.randomUUID(),
+        firstName,
+        lastName,
+        username,
+        email,
+        password,
+      },
+    )
+  ).records.at(0);
+
+  return userSchema.safeParse(result?.get("user"));
 }
 
 /**
- * @param {import("~/validators/user.js").User["id"]} userId
- * @param {import("~/validators/user.js").User["id"]} targetUserId
+ * @param {string} userId
+ */
+export async function getAllUsers(userId) {
+  const session = driver.session();
+
+  const records = (
+    await session.run(
+      `MATCH (u:User)
+      WHERE u.id <> $userId
+      RETURN {
+        id: u.id,
+        name: u.name,
+        image: u.image
+      } as user;`,
+      { userId },
+    )
+  ).records;
+
+  session.close();
+
+  const users = records.map((record) => {
+    return userSchema.parse(record.get("user"));
+  });
+
+  return users;
+}
+
+/**
+ * @param {string} userId
+ * @param {string} targetUserId
  */
 export async function followUser(userId, targetUserId) {
-  return await neo4jSession.run(
-    "MATCH (u1:User {id: $userId}) MATCH (u2: User {id: $targetUserId}) MERGE (u1)-[:FOLLOWS]->(u2)",
+  const session = driver.session();
+
+  const res = await session.run(
+    `MATCH (u:User { id: $userId })
+    MATCH (u1:User { id: $targetUserId })
+    MERGE (u)-[f:FOLLOWS]->(u1)
+    ON CREATE SET f.createdAt = datetime();`,
     { userId, targetUserId },
   );
+
+  session.close();
+
+  return res;
 }
 
 /**
- * @param {import("~/validators/user.js").User["id"]} userId
- * @param {import("~/validators/user.js").User["id"]} targetUserId
+ * @param {string} userId
+ * @param {string} targetUserId
  */
 export async function unfollowUser(userId, targetUserId) {
-  return await neo4jSession.run(
-    "MATCH (u1:User {id: $userId})-[f:FOLLOWS]->(u2: User {id: $targetUserId}) DELETE f",
+  const session = driver.session();
+
+  const res = await session.run(
+    `MATCH (u:User { id: $userId })
+    MATCH (u1:User { id: $targetUserId })
+    MATCH (u)-[f:FOLLOWS]-(u1)
+    DELETE f;`,
     { userId, targetUserId },
   );
+
+  session.close();
+
+  return res;
+}
+
+/**
+ * @param {string} userId
+ * @param {string} targetUserId
+ * @returns {Promise<boolean>} isFollowing
+ */
+export async function isFollowing(userId, targetUserId) {
+  const session = driver.session();
+
+  const res = (
+    await session.run(
+      `MATCH (u:User { id: $userId })
+      MATCH (u1:User {id: $targetUserId })
+      WITH u, u1
+      OPTIONAL MATCH (u)-[r:FOLLOWS]->(u1)
+      RETURN r IS NOT NULL AS isFollowing;`,
+      {
+        userId,
+        targetUserId,
+      },
+    )
+  ).records.at(0);
+
+  session.close();
+
+  return res?.get("isFollowing") ?? false;
+}
+
+/**
+ * @param {string} userId
+ */
+export async function getUserPosts(userId) {
+  const session = driver.session();
+
+  const records = (
+    await session.run(
+      `MATCH (p:Post)<-[:POSTED]-(u:User { id: $userId })
+       OPTIONAL MATCH (p)-[:QUOTES]->(p1:Post)
+       OPTIONAL MATCH (p1)<-[:POSTED]-(u1)
+       RETURN {
+        id: p.id,
+        content: p.content
+      } AS post, {
+        id: p1.id,
+        content: p1.content,
+        user: {
+          id: u1.id,
+          name: u1.name,
+          image: u1.image
+        }
+      } AS quotedPost, {
+        id: u.id,
+        name: u.name,
+        image: u.image
+      } AS user;`,
+      {
+        userId,
+      },
+    )
+  ).records;
+
+  session.close();
+
+  const posts = records.map((record) => {
+    const quotedPost = record.get("quotedPost");
+
+    return {
+      user: record.get("user"),
+      post: {
+        ...record.get("post"),
+        quotedPost: quotedPost.id !== null ? quotedPost : null,
+      },
+    };
+  });
+
+  const parsedPosts = z
+    .array(
+      z.object({
+        user: userSchema,
+        post: postSchema,
+      }),
+    )
+    .safeParse(posts);
+
+  return parsedPosts;
+}
+
+/**
+ * @param {string} userId
+ */
+export async function getUserHome(userId) {
+  const session = driver.session();
+
+  const records = (
+    await session.run(
+      `MATCH (u:User {id: $userId })-[f:FOLLOWS]->(u1:User)
+      MATCH (u1)-[:POSTED]->(p:Post)
+      WHERE p.createdAt >= f.createdAt
+      OPTIONAL MATCH (p)-[:QUOTES]->(p1:Post)
+      OPTIONAL MATCH (p1)<-[:POSTED]-(u1:User)
+      RETURN {
+        id: u1.id,
+        name: u1.name,
+        image: u1.image
+      } AS user, {
+        id: p.id,
+        content: p.content
+      } AS post, {
+        id: p1.id,
+        content: p1.content,
+        user: {
+          id: u1.id,
+          name: u1.name,
+          image: u1.image
+        }
+      } as quotedPost;`,
+      { userId },
+    )
+  ).records;
+
+  session.close();
+
+  const data = records.map((record) => {
+    const quotedPost = record.get("quotedPost");
+
+    return {
+      user: record.get("user"),
+      post: {
+        ...record.get("post"),
+        quotedPost: quotedPost.id !== null ? quotedPost : null,
+      },
+    };
+  });
+
+  const posts = z
+    .array(
+      z.object({
+        user: userSchema,
+        post: postSchema,
+      }),
+    )
+    .parse(data);
+
+  return posts;
+}
+
+/**
+ * @param {string} userId
+ * @param {string} bio
+ */
+export async function updateUserBio(userId, bio) {
+  const session = driver.session();
+
+  const res = (
+    await session.run(
+      `MATCH (u:User { id: $userId })
+      SET u.bio = $bio
+      RETURN { id: u.id, name: u.name, image: u.image, bio: u.bio } AS user;`,
+      { userId, bio },
+    )
+  ).records.at(0);
+
+  session.close();
+
+  const user = userSchema.safeParse(res?.get("user"));
+
+  return user;
 }

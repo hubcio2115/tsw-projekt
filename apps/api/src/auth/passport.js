@@ -1,22 +1,41 @@
 import passport from "passport";
-import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import { env } from "~/env.mjs";
+import { Strategy as LocalStrategy } from "passport-local";
+import { verify } from "argon2";
+import { getUserById, getUserByName } from "~/db/user";
 
 passport.use(
-  new GoogleStrategy(
-    {
-      clientID: env.GOOGLE_CLIENT_ID,
-      clientSecret: env.GOOGLE_CLIENT_SECRET,
-      callbackURL: "http://localhost:8080/oauth2/redirect/google",
-      scope: ["email", "profile"],
-      state: true,
-    },
-    (accessToken, refreshToken, profile, cb) => {
-      console.log(accessToken);
-      console.log(refreshToken);
-      console.log(profile);
-    },
-  ),
+  new LocalStrategy(async (username, password, done) => {
+    const user = await getUserByName(username);
+
+    if (!user.success) return done(null, false, { message: "Authentication failed." });
+
+    const authorized = await verify(password, user.data.password);
+
+    if (!authorized)
+      return done(null, false, { message: "Authentication failed." });
+
+    return done(null, user.data.id);
+  }),
 );
+
+passport.serializeUser((id, done) => {
+  return done(null, id);
+});
+
+passport.deserializeUser(async (id, done) => {
+  const user = await getUserById(id);
+
+  if (!user.success) {
+    return done("Not found");
+  }
+
+  return done(null, {
+    id,
+    firstName: user.data.firstName,
+    lastName: user.data.lastName,
+    username: user.data.username,
+    email: user.data.email,
+  });
+});
 
 export default passport;

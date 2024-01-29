@@ -1,9 +1,16 @@
+import neo4jStoreCreate from "connect-neo4j-user";
+import cookieParser from "cookie-parser";
 import express from "express";
 import session from "express-session";
+
 import passport from "~/auth/passport.js";
-import neo4jStoreCreate from "connect-neo4j-user";
-import { env } from "./env.mjs";
+
 import { driver } from "./db/db.js";
+import { env } from "./env.mjs";
+import { checkAuthenticated } from "./middlewares/isAuthed.js";
+import { posts } from "./routers/posts.js";
+import { root } from "./routers/root.js";
+import { users } from "./routers/users.js";
 
 const app = express();
 
@@ -25,21 +32,9 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.get("/", (_req, res) => {
-  res.send({ message: "Hello World!" });
-});
-
-app.get("/login/google", passport.authenticate("google"));
-
-app.get(
-  "/oauth2/redirect/google",
-  passport.authenticate("google", {
-    failureMessage: true,
-  }),
-  function(_, res) {
-    res.redirect("/");
-  },
-);
+app.use("users", users);
+app.use("posts", posts);
+app.use("/", root);
 
 app.listen(8080);
 console.log("App listening at port: 8080");

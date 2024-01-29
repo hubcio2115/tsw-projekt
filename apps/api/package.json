@@ -13,13 +13,16 @@
   "license": "ISC",
   "dependencies": {
     "@t3-oss/env-core": "^0.7.3",
+    "@trivago/prettier-plugin-sort-imports": "^4.3.0",
     "argon2": "^0.31.2",
     "connect-neo4j-user": "^1.0.4",
+    "cookie-parser": "^1.4.6",
     "express": "^4.18.2",
     "express-session": "^1.17.3",
     "neo4j-driver": "^5.16.0",
     "passport": "^0.7.0",
-    "passport-google-oauth20": "^2.0.0",
+    "passport-local": "^1.0.0",
+    "prettier": "^3.2.4",
     "zod": "^3.22.4"
   },
   "devDependencies": {
