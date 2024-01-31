@@ -4,11 +4,11 @@ import axios from "axios";
 import { ArrowLeft } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import io from "socket.io-client";
-import { onMounted, onUnmounted } from "vue";
-import { onBeforeRouteUpdate, useRoute, useRouter } from "vue-router";
+import { onMounted, onUnmounted, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { z } from "zod";
-import PostComponent from "~/components/PostComponent.vue";
 
+import PostComponent from "~/components/PostComponent.vue";
 import Spinner from "~/components/ui/Spinner.vue";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
@@ -25,7 +25,7 @@ const route = useRoute();
 const store = useAuthStore();
 const { user } = storeToRefs(store);
 
-const { data: userProfile } = useQuery({
+const { data: userProfile, refetch: refetchProfile } = useQuery({
   queryKey: ["user", route.params.id],
   queryFn: async ({ queryKey: [_, userId] }) => {
     const res = await axios.get(
@@ -44,17 +44,17 @@ const { data: userProfile } = useQuery({
 });
 
 let isEdditingBio = $ref(false);
+let userBio = $ref("");
 
-let userBio = $computed({
-  get: () => userProfile.value?.bio ?? "",
-  set: (val) => val,
+watch(userProfile, () => {
+  userBio = userProfile.value?.bio ?? "";
 });
 
 /** @type {ReturnType<typeof $ref<import('socket.io-client').Socket | null>>} */
 let socket = $ref(null);
 
 onMounted(() => {
-  socket = io(`${env.VITE_API_BASE_URL}`);
+  socket = io(`${env.VITE_API_BASE_URL}/follow`);
 });
 
 onUnmounted(() => {
@@ -72,7 +72,7 @@ const { mutate: updateBio, isPending: isUpdateBioPending } =
   )({
     mutationKey: ["bio"],
     mutationFn: async (bio) => {
-      const res = await axios.post(
+      const res = await axios.patch(
         `${env.VITE_API_BASE_URL}/api/users/${userProfile.value?.id}/bio`,
         { bio },
         { withCredentials: true },
@@ -89,7 +89,7 @@ const { mutate: updateBio, isPending: isUpdateBioPending } =
 
     onSuccess: (data) => {
       userBio = data.bio ?? "";
-      userProfile.value = data;
+      refetchProfile();
       toggleIsEdditing();
     },
   });
@@ -235,7 +235,7 @@ const initials = $computed(() =>
           <template v-if="user?.id === userProfile?.id">
             <Textarea
               v-if="isEdditingBio"
-              v-model="userBio"
+              v-model:value="userBio"
               placeholder="Write something about yourself, it can be anything..."
             />
 
@@ -291,10 +291,16 @@ const initials = $computed(() =>
           <Spinner class="mx-auto" />
         </template>
 
-        <p v-if="posts && posts?.length === 0" class="text-center">
-          No posts, yet... <br />
-          Maybe it's time to <span class="font-bold"> post </span> something?
-        </p>
+        <template v-if="posts && posts?.length === 0">
+          <p v-if="user?.id === userProfile?.id" class="text-center">
+            No posts, yet... <br />
+            Maybe it's time to <span class="font-bold"> post </span> something?
+          </p>
+
+          <p v-else class="text-center">
+            This user has not posted anything, yet...
+          </p>
+        </template>
 
         <template v-else>
           <div v-for="{ post, user: poster } in posts" :key="post.id">
