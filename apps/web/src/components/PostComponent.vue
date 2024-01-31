@@ -1,14 +1,18 @@
 <script setup>
 import { useMutation } from "@tanstack/vue-query";
+import axios from "axios";
 import { PenLine } from "lucide-vue-next";
 import { useRouter } from "vue-router";
 
 import { Dialog, DialogContent, DialogTrigger } from "~/components/ui/dialog";
+import { env } from "~/env.mjs";
 import { getInitials } from "~/lib/utils";
 import { postSchema } from "~/lib/validators/post";
 import { userSchema } from "~/lib/validators/user";
 
+import PostTextArea from "./PostTextArea.vue";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import QuoteComponent from "./QuoteComponent.vue";
 
 const router = useRouter();
 
@@ -35,21 +39,23 @@ const props = defineProps({
 });
 
 const { mutate: createQuote } =
-  /** @type {typeof useMutation<import("~/lib/validators/post").Post | null, Error, [string, string]>} */ (
+  /** @type {typeof useMutation<import("~/lib/validators/post").Post | null, Error, [string, string, string]>} */ (
     useMutation
   )({
     mutationKey: ["quote", "create"],
-    mutationFn: async ([postId, content]) => {
-      const res = await fetch("/api/posts/quote", {
-        method: "POST",
-        body: JSON.stringify({ postId, content }),
-      });
+    mutationFn: async ([userId, postId, content]) => {
+      const res = await axios.post(
+        `${env.VITE_API_BASE_URL}/api/posts/quote`,
+        { userId, postId, content },
+        { withCredentials: true },
+      );
 
-      if (!res.ok) {
+      const isSucessful = res.status >= 200 || res.status <= 299;
+      if (!isSucessful) {
         throw new Error(res.statusText);
       }
 
-      const data = postSchema.parse(await res.json());
+      const data = postSchema.parse(await res.data);
 
       return data;
     },
@@ -63,7 +69,7 @@ const { mutate: createQuote } =
  * @param {string} content
  */
 function onSubmit(content) {
-  createQuote([props.post.id, content]);
+  createQuote([props.poster.id, props.post.id, content]);
 }
 
 function navigateToPoster() {
