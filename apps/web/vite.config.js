@@ -6,4 +6,10 @@ import tsconfigPaths from "vite-tsconfig-paths";
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [vue(), tsconfigPaths(), ReactivityTransform()],
+  server: {
+    https: {
+      key: "./ssl/private-key.pem",
+      cert: "./ssl/certificate.pem",
+    },
+  },
 });
