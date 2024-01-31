@@ -61,7 +61,7 @@ const onSubmit = createSubmitHandler(async () => {
 
     store.setUser(user);
 
-    await router.push({ path: "/home" });
+    router.push({ path: "/home" });
   }
 });
 
