@@ -1,11 +1,6 @@
 <script setup>
-import {
-  createErrorHandler,
-  createSubmitHandler,
-  useForm,
-} from "@vue-hooks-form/core";
+import { createErrorHandler, useForm } from "@vue-hooks-form/core";
 import { useZodResolver } from "@vue-hooks-form/zod";
-import axios from "axios";
 
 import { Button } from "~/components/ui/button";
 import {
@@ -18,9 +13,38 @@ import {
 } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { env } from "~/env.mjs";
 import { cn } from "~/lib/utils";
 import { authSchema } from "~/lib/validators/user";
+
+/**
+ * @type {{defaultValues: import("~/lib/validators/user").AuthUser | null, title: string, description: string, buttonLabel: string }} PostTextAreaProps
+ */
+// @ts-expect-error Wrong type inference
+const props = defineProps({
+  defaultValues: {
+    type: Object,
+    required: false,
+    default: null,
+    validator(value) {
+      return authSchema.nullable().safeParse(value).success;
+    },
+  },
+  title: {
+    type: String,
+    required: false,
+    default: "Register",
+  },
+  description: {
+    type: String,
+    required: false,
+    default: "Create your account here.",
+  },
+  buttonLabel: {
+    type: String,
+    required: false,
+    default: "Register",
+  },
+});
 
 const {
   register,
@@ -29,51 +53,49 @@ const {
   formState: { errors },
 } = useForm({
   defaultValues: {
-    username: "",
-    firstName: "",
-    lastName: "",
-    email: "",
-    password: "",
+    username: props.defaultValues?.username ?? "",
+    firstName: props.defaultValues?.firstName ?? "",
+    lastName: props.defaultValues?.lastName ?? "",
+    email: props.defaultValues?.email ?? "",
+    password: props.defaultValues?.password ?? "",
   },
   resolver: useZodResolver(authSchema),
 });
-
-const onSubmit =
-  /** @type {typeof createSubmitHandler<import("~/lib/validators/user").AuthUser>}*/ (
-    createSubmitHandler
-  )(async () => {
-    const data = {
-      username: getValues("username").username,
-      firstName: getValues("firstName").firstName,
-      lastName: getValues("lastName").lastName,
-      email: getValues("email").email,
-      password: getValues("password").password,
-    };
-
-    const res = await axios.post(
-      `${env.VITE_API_BASE_URL}/api/auth/register`,
-      data,
-      { withCredentials: true },
-    );
-
-    if (res.status >= 200 || res.status <= 299) {
-      location.reload();
-    }
-  });
 
 const onError = createErrorHandler((errors) => {
   console.error(errors);
 });
 
-const submitHandler = handleSubmit(onSubmit, onError);
+const emit = defineEmits({
+  /**
+   * @param {import("~/lib/validators/user").AuthUser} user
+   */
+  onSubmit(user) {
+    return authSchema.safeParse(user).success;
+  },
+});
+
+function submit() {
+  const data = {
+    username: getValues("username").username,
+    firstName: getValues("firstName").firstName,
+    lastName: getValues("lastName").lastName,
+    email: getValues("email").email,
+    password: getValues("password").password,
+  };
+
+  emit("onSubmit", data);
+}
+
+const submitHandler = handleSubmit(submit, onError);
 </script>
 
 <template>
   <Card>
     <CardHeader>
-      <CardTitle>Register</CardTitle>
+      <CardTitle>{{ title }}</CardTitle>
 
-      <CardDescription> Create your account here. </CardDescription>
+      <CardDescription> {{ description }} </CardDescription>
     </CardHeader>
 
     <form @submit.prevent="submitHandler">
@@ -191,7 +213,7 @@ const submitHandler = handleSubmit(onSubmit, onError);
       </CardContent>
 
       <CardFooter class="flex justify-end">
-        <Button type="submit">Register</Button>
+        <Button type="submit">{{ buttonLabel }}</Button>
       </CardFooter>
     </form>
   </Card>
