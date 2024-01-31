@@ -1,10 +1,8 @@
 <script setup>
 import { useMutation, useQuery } from "@tanstack/vue-query";
-import { VueQueryDevtools } from "@tanstack/vue-query-devtools";
 import axios from "axios";
 import { Home, User } from "lucide-vue-next";
-import { LogOut, MoreHorizontal } from "lucide-vue-next";
-import { storeToRefs } from "pinia";
+import { LogOut, MoreHorizontal, Settings } from "lucide-vue-next";
 import io from "socket.io-client";
 import { onMounted, onUnmounted } from "vue";
 import { RouterView, useRoute, useRouter } from "vue-router";
@@ -30,28 +28,37 @@ const router = useRouter();
 const route = useRoute();
 
 const store = useAuthStore();
-const { user } = storeToRefs(store);
 
 /** @type {ReturnType<typeof $ref<import('socket.io-client').Socket | null>>} */
-let socket = $ref(null);
+let followSocket = $ref(null);
+
+/** @type {ReturnType<typeof $ref<import('socket.io-client').Socket | null>>} */
+let postSocket = $ref(null);
 
 onMounted(() => {
-  socket = io(`${env.VITE_API_BASE_URL}`);
+  followSocket = io(`${env.VITE_API_BASE_URL}/follow`);
 
-  socket.on("connection", () => {
-    console.log("Connected to socket.");
+  followSocket.on("connection", () => {
+    console.log("Connected to /follow.");
   });
 
   /** @param {{ sender: string; target: string; senderUsername: string}} followEvent */
-  socket.on("followed", (followEvent) => {
-    if (followEvent.target === user.value?.id) {
+  followSocket.on("followed", (followEvent) => {
+    if (followEvent.target === store.user?.id) {
       alert(`${followEvent.senderUsername} followed you!`);
     }
+  });
+
+  postSocket = io(`${env.VITE_API_BASE_URL}/post`);
+
+  postSocket.on("connection", () => {
+    console.log("Connected to /post.");
   });
 });
 
 onUnmounted(() => {
-  socket?.disconnect();
+  followSocket?.disconnect();
+  postSocket?.disconnect();
 });
 
 const { data: users, isPending: fetchingUsers } = useQuery({
@@ -104,8 +111,9 @@ const postMutation =
       return data;
     },
 
-    onSuccess: (data, [userId]) => {
-      router.push(`/${userId}/posts/${data?.id}`);
+    onSuccess: (data) => {
+      postSocket?.emit("post", store.user?.id);
+      router.push(`/${store.user?.id}/posts/${data?.id}`);
     },
   });
 
@@ -117,7 +125,7 @@ function onSubmit(content) {
 }
 
 const initials = $computed(() =>
-  getInitials(user.value?.firstName, user.value?.lastName),
+  getInitials(store.user?.firstName, store.user?.lastName),
 );
 
 /**
@@ -158,13 +166,27 @@ function goToUserProfile(userId) {
         :class="
           cn(
             'max-w-min items-start justify-start rounded-full text-2xl',
-            route.fullPath === `/${user?.id}` ? 'font-bold' : '',
+            route.fullPath === `/${store.user?.id}` ? 'font-bold' : '',
           )
         "
-        @click="goToUserProfile(user?.id)"
+        @click="goToUserProfile(store.user?.id)"
       >
         <User :size="24" />
         Profile
+      </Button>
+
+      <Button
+        variant="ghost"
+        :class="
+          cn(
+            'max-w-min items-start justify-start rounded-full text-2xl',
+            route.fullPath === '/details' ? 'font-bold' : '',
+          )
+        "
+        @click="router.push('/details')"
+      >
+        <Settings :size="24" />
+        Settings
       </Button>
 
       <Dialog>
@@ -195,9 +217,9 @@ function goToUserProfile(userId) {
 
             <div>
               <p class="font-bold">
-                {{ user?.firstName }} {{ user?.lastName }}
+                {{ store.user?.firstName }} {{ store.user?.lastName }}
               </p>
-              <p class="text-left">@{{ user?.username }}</p>
+              <p class="text-left">@{{ store.user?.username }}</p>
             </div>
 
             <MoreHorizontal class="ml-auto mr-0" />
