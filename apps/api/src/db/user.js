@@ -35,6 +35,43 @@ export async function getUserByName(username) {
 
 /**
  * @param {string} userId
+ * @param {Omit<import("~/validators/user.js").User, "id">} newUser
+ */
+export async function updateUserById(userId, newUser) {
+  const session = driver.session();
+
+  const result = (
+    await session.run(
+      `MATCH (u:User { id: $id })
+      SET u.email = $email, u.firstName = $firstName, u.lastName = $lastName, u.userName = $username, u.password = $password
+      RETURN {
+        id: u.id,
+        email: u.email,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        username: u.username,
+        password: u.password
+      } as user;`,
+      {
+        id: userId,
+        email: newUser.email,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        username: newUser.username,
+        password: newUser.password,
+      },
+    )
+  ).records.at(0);
+
+  session.close();
+
+  const userData = result?.get("user");
+
+  return userSchema.safeParse(userData);
+}
+
+/**
+ * @param {string} userId
  */
 export async function getUserById(userId) {
   const session = driver.session();
@@ -346,4 +383,26 @@ export async function updateUserBio(userId, bio) {
   const user = userSchema.safeParse(res?.get("user"));
 
   return user;
+}
+
+
+/**
+ * @param {string} userId
+ */
+export async function getUserFollowers(userId) {
+  const session = driver.session();
+
+  const res = (
+    await session.run(
+      `MATCH (:User { id: $userId })<-[:FOLLOWS]-(u:User)
+      RETURN u.id as id`,
+      { userId },
+    )
+  ).records;
+
+  session.close();
+
+  const userIds = res.map((record) => record.get("id"));
+
+  return z.array(z.string()).parse(userIds);
 }
