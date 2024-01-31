@@ -1,3 +1,4 @@
+import { hash } from "argon2";
 import { Router } from "express";
 import { z } from "zod";
 
@@ -9,8 +10,10 @@ import {
   isFollowing,
   unfollowUser,
   updateUserBio,
+  updateUserById,
 } from "~/db/user.js";
 import { checkAuthenticated } from "~/middlewares/isAuthed.js";
+import { authSchema } from "~/validators/user.js";
 
 export const users = Router({
   strict: true,
@@ -38,7 +41,28 @@ users.get("/:id", async (req, res) => {
   return res.status(200).send(user.data);
 });
 
-users.put("/:id/bio", checkAuthenticated, async (req, res) => {
+users.put("/details", checkAuthenticated, async (req, res) => {
+  const newDetails = authSchema.safeParse(req.body);
+
+  if (!newDetails.success) {
+    return res.status(403).send({ message: "Not all values were provided." });
+  }
+
+  const hashedPassword = await hash(newDetails.data.password);
+
+  const newUser = await updateUserById(req.user?.id, {
+    ...newDetails.data,
+    password: hashedPassword,
+  });
+
+  if (!newUser.success) {
+    return res.status(500).send({ message: "Something went wrong." });
+  }
+
+  return res.status(200).send(newUser.data);
+});
+
+users.patch("/:id/bio", checkAuthenticated, async (req, res) => {
   const body = z.object({ bio: z.string() }).safeParse(req.body);
 
   if (!body.success) {
