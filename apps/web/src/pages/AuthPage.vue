@@ -1,7 +1,49 @@
 <script setup>
+import { useQuery } from "@tanstack/vue-query";
+import { createSubmitHandler } from "@vue-hooks-form/core";
+import axios from "axios";
+import { useRoute } from "vue-router";
+
 import LoginForm from "~/components/LoginForm.vue";
 import RegisterForm from "~/components/RegisterForm.vue";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { env } from "~/env.mjs";
+import { userSchema } from "~/lib/validators/user";
+
+const route = useRoute();
+
+const { data: userProfile, isPending: isUserProfilePending } = useQuery({
+  queryKey: ["userProfile", route.params.id],
+  queryFn: async ({ queryKey: [_, userId] }) => {
+    const res = await axios.get(
+      `${env.VITE_API_BASE_URL}/api/users/${userId}`,
+      { withCredentials: true },
+    );
+
+    if (res.status >= 200 || res.status <= 299) {
+      const data = res.data;
+
+      return userSchema.parse(data);
+    }
+
+    return null;
+  },
+});
+
+const onSubmit =
+  /** @type {typeof createSubmitHandler<import("~/lib/validators/user").AuthUser>}*/ (
+    createSubmitHandler
+  )(async (data) => {
+    const res = await axios.post(
+      `${env.VITE_API_BASE_URL}/api/auth/register`,
+      data,
+      { withCredentials: true },
+    );
+
+    if (res.status >= 200 || res.status <= 299) {
+      location.reload();
+    }
+  });
 </script>
 
 <template>
@@ -30,7 +72,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
           </TabsContent>
 
           <TabsContent value="register">
-            <RegisterForm />
+            <RegisterForm @on-submit="onSubmit" />
           </TabsContent>
         </Tabs>
       </div>

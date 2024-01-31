@@ -5,6 +5,7 @@ import Auth from "~/pages/AuthPage.vue";
 import Home from "~/pages/HomePage.vue";
 import Post from "~/pages/PostPage.vue";
 import Profile from "~/pages/ProfilePage.vue";
+import UserDetails from "~/pages/UserDetailsPage.vue";
 
 import { isAuthed, isUnauthed } from "./guards/authedGuard";
 
@@ -41,6 +42,13 @@ export const router = createRouter({
           path: ":id/posts/:postId",
           name: "Post",
           component: Post,
+          meta: {},
+          beforeEnter: [isAuthed],
+        },
+        {
+          path: "details",
+          name: "UserDetails",
+          component: UserDetails,
           meta: {},
           beforeEnter: [isAuthed],
         },
