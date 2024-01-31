@@ -1,19 +1,19 @@
 import { useAuthStore } from "~/store/authStore";
 
 /** @type {import("vue-router").NavigationGuardWithThis<undefined>} */
-export const isAuthed = () => {
+export const isAuthed = (_to, _from, next) => {
   const store = useAuthStore();
 
-  if (!!store.user) return true;
-
-  return { name: "Auth" };
+  if (!!store.user) next();
+  else next("/auth");
 };
 
 /** @type {import("vue-router").NavigationGuardWithThis<undefined>} */
-export const isUnauthed = () => {
+export const isUnauthed = (_to, _from, next) => {
   const store = useAuthStore();
 
-  if (!store.user) return true;
+  console.log(store.user);
 
-  return { name: "Home" };
+  if (!store.user) next();
+  else next("/home");
 };
