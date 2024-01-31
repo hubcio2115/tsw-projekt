@@ -1,5 +1,6 @@
 <script setup>
 import { useMutation, useQuery } from "@tanstack/vue-query";
+import axios from "axios";
 import { ArrowLeft } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import { effect } from "vue";
@@ -7,7 +8,10 @@ import { useRoute, useRouter } from "vue-router";
 import { z } from "zod";
 
 import PostComponent from "~/components/PostComponent.vue";
+import PostTextArea from "~/components/PostTextArea.vue";
+import Spinner from "~/components/ui/Spinner.vue";
 import { Button } from "~/components/ui/button";
+import { env } from "~/env.mjs";
 import { postSchema } from "~/lib/validators/post";
 import { userSchema } from "~/lib/validators/user";
 import { useAuthStore } from "~/store/authStore";
@@ -18,13 +22,16 @@ const { user } = storeToRefs(store);
 const route = useRoute();
 const router = useRouter();
 
-const { data: userProfile } = useQuery({
+const { data: userProfile, isPending: isUserProfilePending } = useQuery({
   queryKey: ["userProfile", route.params.id],
   queryFn: async ({ queryKey: [_, userId] }) => {
-    const res = await fetch(`/api/users/${userId}`);
+    const res = await axios.get(
+      `${env.VITE_API_BASE_URL}/api/users/${userId}`,
+      { withCredentials: true },
+    );
 
-    if (res.ok) {
-      const data = res.json();
+    if (res.status >= 200 || res.status <= 299) {
+      const data = res.data;
 
       return userSchema.parse(data);
     }
@@ -33,23 +40,28 @@ const { data: userProfile } = useQuery({
   },
 });
 
-const { data: postData } = useQuery({
+const { data: postData, isPending: isPostPending } = useQuery({
   queryKey: ["post", route.params.postId],
   queryFn: async ({ queryKey: [_, postId] }) => {
-    const res = await fetch(`/api/posts/${postId}`);
+    const res = await axios.get(
+      `${env.VITE_API_BASE_URL}/api/posts/${postId}`,
+      { withCredentials: true },
+    );
 
-    if (res.ok) {
-      const data = res.json();
+    if (res.status >= 200 || res.status <= 299) {
+      const data = res.data;
 
       return z
         .object({
           post: postSchema,
-          replies: z.array(
-            z.object({
-              reply: postSchema,
-              user: userSchema,
-            }),
-          ),
+          replies: z
+            .array(
+              z.object({
+                reply: postSchema,
+                user: userSchema,
+              }),
+            )
+            .nullish(),
         })
         .parse(data);
     }
@@ -64,13 +76,16 @@ effect(() => {
   }
 });
 
-const { data: replies } = useQuery({
+const { data: replies, refetch: refetchReplies } = useQuery({
   queryKey: ["replies", route.params.postId],
   queryFn: async ({ queryKey: [_, postId] }) => {
-    const res = await fetch(`/api/posts/${postId}/replies`);
+    const res = await axios.get(
+      `${env.VITE_API_BASE_URL}/api/posts/${postId}/replies`,
+      { withCredentials: true },
+    );
 
-    if (res.ok) {
-      const data = res.json();
+    if (res.status >= 200 || res.status <= 299) {
+      const data = res.data;
 
       return z
         .array(
@@ -92,12 +107,14 @@ const replyMutation =
   )({
     mutationKey: ["reply", "create"],
     mutationFn: async ([userId, postId, content]) => {
-      const res = await fetch("/api/reply", {
-        method: "POST",
-        body: JSON.stringify({ userId, content, postId }),
-      });
+      const res = await axios.post(
+        `${env.VITE_API_BASE_URL}/api/posts/${postId}/reply`,
+        { userId, content, postId },
+        { withCredentials: true },
+      );
 
-      if (!res.ok) {
+      const isSucessful = res.status >= 200 || res.status <= 299;
+      if (!isSucessful) {
         throw new Error(res.statusText);
       }
 
@@ -106,17 +123,14 @@ const replyMutation =
           user: userSchema,
           post: postSchema,
         })
-        .parse(await res.json());
+        .parse(res.data);
 
       return data;
     },
 
     onSuccess: (data) => {
       if (data) {
-        const temp = replies.value;
-
-        temp?.push(data);
-        replies.value = temp;
+        refetchReplies();
       }
     },
 
@@ -135,12 +149,6 @@ function onSubmit(content) {
 
 <template>
   <div class="col-span-2 col-start-2 flex flex-col border-x border-x-secondary">
-    <Head>
-      <Title
-        >{{ userProfile?.firstName }} {{ userProfile?.lastName }} on Y</Title
-      >
-    </Head>
-
     <div class="flex items-center">
       <Button variant="ghost" class="rounded-full px-2" @click="router.back()">
         <ArrowLeft :size="20" />
@@ -158,7 +166,8 @@ function onSubmit(content) {
       />
     </template>
 
-    <PostComponent :post="postData?.post" :poster="userProfile" />
+    <Spinner v-if="isUserProfilePending || isPostPending" />
+    <PostComponent v-else :post="postData?.post" :poster="userProfile" />
 
     <PostTextArea
       placeholder="Write your reply!"

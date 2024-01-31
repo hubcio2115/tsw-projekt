@@ -1,11 +1,13 @@
 <script setup>
 import { useMutation, useQuery } from "@tanstack/vue-query";
+import axios from "axios";
 import { ArrowLeft } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import io from "socket.io-client";
 import { onMounted, onUnmounted } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { onBeforeRouteUpdate, useRoute, useRouter } from "vue-router";
 import { z } from "zod";
+import PostComponent from "~/components/PostComponent.vue";
 
 import Spinner from "~/components/ui/Spinner.vue";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
@@ -26,10 +28,13 @@ const { user } = storeToRefs(store);
 const { data: userProfile } = useQuery({
   queryKey: ["user", route.params.id],
   queryFn: async ({ queryKey: [_, userId] }) => {
-    const res = await fetch(`/api/users/${userId}`);
+    const res = await axios.get(
+      `${env.VITE_API_BASE_URL}/api/users/${userId}`,
+      { withCredentials: true },
+    );
 
-    if (res.ok) {
-      const data = await res.json();
+    if (res.status >= 200 || res.status <= 299) {
+      const data = await res.data;
 
       return userSchema.parse(data);
     }
@@ -49,7 +54,7 @@ let userBio = $computed({
 let socket = $ref(null);
 
 onMounted(() => {
-  socket = io(env.VITE_API_BASE_URL);
+  socket = io(`${env.VITE_API_BASE_URL}`);
 });
 
 onUnmounted(() => {
@@ -67,13 +72,14 @@ const { mutate: updateBio, isPending: isUpdateBioPending } =
   )({
     mutationKey: ["bio"],
     mutationFn: async (bio) => {
-      const res = await fetch(`/api/users/${userProfile.value?.id}/bio`, {
-        method: "PUT",
-        body: JSON.stringify({ bio }),
-      });
+      const res = await axios.post(
+        `${env.VITE_API_BASE_URL}/api/users/${userProfile.value?.id}/bio`,
+        { bio },
+        { withCredentials: true },
+      );
 
-      if (res.ok) {
-        const data = userSchema.parse(await res.json());
+      if (res.status >= 200 || res.status <= 299) {
+        const data = userSchema.parse(await res.data);
 
         return data;
       }
@@ -94,18 +100,19 @@ function submitBio() {
 
 let isFollowing = $ref(false);
 
-onMounted(() => {
-  fetch(`/api/users/${route.params.id}/isFollowing`)
-    .then((res) => {
-      return res.json();
-    })
-    .then((data) => {
-      const { isFollowing: newFollowStatus } = z
-        .object({ isFollowing: z.boolean() })
-        .parse(data);
+onMounted(async () => {
+  const res = await axios.get(
+    `${env.VITE_API_BASE_URL}/api/users/${route.params.id}/isFollowing`,
+    { withCredentials: true },
+  );
 
-      isFollowing = newFollowStatus;
-    });
+  if (res.status >= 200 || res.status <= 299) {
+    const { isFollowing: newFollowStatus } = z
+      .object({ isFollowing: z.boolean() })
+      .parse(res.data);
+
+    isFollowing = newFollowStatus;
+  }
 });
 
 const { mutate: followUser, isPending: isFollowPending } =
@@ -114,11 +121,13 @@ const { mutate: followUser, isPending: isFollowPending } =
   )({
     mutationKey: ["follow", user.value?.id, userProfile.value?.id],
     mutationFn: async () => {
-      const res = await fetch(`/api/users/${userProfile.value?.id}/follow`, {
-        method: "POST",
-      });
+      const res = await axios.post(
+        `${env.VITE_API_BASE_URL}/api/users/${userProfile.value?.id}/follow`,
+        {},
+        { withCredentials: true },
+      );
 
-      if (res.ok) {
+      if (res.status >= 200 || res.status <= 299) {
         return null;
       }
 
@@ -131,7 +140,7 @@ const { mutate: followUser, isPending: isFollowPending } =
       if (isFollowing) {
         socket?.emit("follow", {
           sender: user.value?.id,
-          senderUsername: userProfile.value?.username,
+          senderUsername: user.value?.username,
           target: userProfile.value?.id,
         });
       }
@@ -141,29 +150,32 @@ const { mutate: followUser, isPending: isFollowPending } =
 const { data: posts } = useQuery({
   queryKey: ["posts", route.params.id],
   queryFn: async () => {
-    const res = await fetch(`/api/users/${route.params.id}/posts`);
+    const res = await axios.get(
+      `${env.VITE_API_BASE_URL}/api/users/${route.params.id}/posts`,
+      { withCredentials: true },
+    );
 
-    if (!res.ok) {
-      throw new Error(res.statusText);
+    if (res.status >= 200 || res.status <= 299) {
+      const data = res.data;
+
+      const posts = z
+        .array(
+          z.object({
+            user: userSchema,
+            post: postSchema,
+          }),
+        )
+        .safeParse(data);
+
+      if (!posts.success) {
+        console.error(posts.error);
+        throw posts.error;
+      }
+
+      return posts.data;
     }
 
-    const data = await res.json();
-
-    const posts = z
-      .array(
-        z.object({
-          user: userSchema,
-          post: postSchema,
-        }),
-      )
-      .safeParse(data);
-
-    if (!posts.success) {
-      console.error(posts.error);
-      throw posts.error;
-    }
-
-    return posts.data;
+    throw new Error(res.statusText);
   },
 });
 

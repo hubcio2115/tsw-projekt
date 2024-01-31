@@ -1,11 +1,13 @@
 <script setup>
 import { useQuery } from "@tanstack/vue-query";
+import axios from "axios";
 import { Loader2 } from "lucide-vue-next";
 import { z } from "zod";
 
 import PostComponent from "~/components/PostComponent.vue";
 import Spinner from "~/components/ui/Spinner.vue";
 import { Button } from "~/components/ui/button";
+import { env } from "~/env.mjs";
 import { postSchema } from "~/lib/validators/post.js";
 import { userSchema } from "~/lib/validators/user";
 
@@ -16,10 +18,12 @@ const {
 } = useQuery({
   queryKey: ["home", "posts"],
   queryFn: async () => {
-    const res = await fetch("/api/users/home");
+    const res = await axios.get(`${env.VITE_API_BASE_URL}/api/home`, {
+      withCredentials: true,
+    });
 
-    if (res.ok) {
-      const data = await res.json();
+    if (res.status >= 200 || res.status <= 299) {
+      const data = await res.data;
 
       return z
         .array(
