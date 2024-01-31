@@ -1,23 +1,29 @@
 import { Router } from "express";
 import { z } from "zod";
+
 import {
   followUser,
+  getAllUsers,
   getUserById,
-  getUserHome,
   getUserPosts,
   isFollowing,
   unfollowUser,
   updateUserBio,
 } from "~/db/user.js";
-import { checkAuthenticated } from "~/middlewares/isAuthed";
-import { userSchema } from "~/validators/user.js";
+import { checkAuthenticated } from "~/middlewares/isAuthed.js";
 
 export const users = Router({
   strict: true,
 });
 
+users.get("/", checkAuthenticated, async (req, res) => {
+  const users = await getAllUsers(req.user?.id);
+
+  return res.status(200).send(users);
+});
+
 users.get("/:id", async (req, res) => {
-  const id = userSchema.safeParse(req.params.id);
+  const id = z.object({ id: z.string() }).safeParse(req.params);
 
   if (!id.success) {
     return res.status(403).send({ message: "Id has to be in uuid format." });
@@ -29,7 +35,7 @@ users.get("/:id", async (req, res) => {
     return res.status(404).send({ message: "User not found." });
   }
 
-  return res.send(user.data);
+  return res.status(200).send(user.data);
 });
 
 users.put("/:id/bio", checkAuthenticated, async (req, res) => {
@@ -46,17 +52,16 @@ users.put("/:id/bio", checkAuthenticated, async (req, res) => {
     return res.status(404).send({ message: "User doesn't exist." });
   }
 
-  return res.send(result.data);
+  return res.status(200).send(result.data);
 });
 
 users.post("/:id/follow", checkAuthenticated, async (req, res) => {
-  const params = z.object({ id: z.string().uuid() }).safeParse(req.params);
-
+  const params = z.object({ id: z.string() }).safeParse(req.params);
   if (!params.success) {
     return res.status(404).send({ message: "User not found." });
   }
 
-  if (req.user.id !== params.data.id) {
+  if (req.user.id === params.data.id) {
     return res.status(400).send({ message: "You cannot follow yourself." });
   }
 
@@ -72,21 +77,19 @@ users.post("/:id/follow", checkAuthenticated, async (req, res) => {
 });
 
 users.get("/:id/isFollowing", checkAuthenticated, async (req, res) => {
-  const params = z.object({ id: z.string().uuid() }).safeParse(req.params);
+  const params = z.object({ id: z.string() }).safeParse(req.params);
 
   if (!params.success) {
     return res.status(404).send({ message: "User not found." });
   }
 
-  const isFollowingUser = isFollowing(req.user.id, params.data.id);
+  const isFollowingUser = await isFollowing(req.user.id, params.data.id);
 
-  return {
-    isFollowing: isFollowingUser,
-  };
+  return res.status(200).send({ isFollowing: isFollowingUser });
 });
 
 users.get("/:id/posts", checkAuthenticated, async (req, res) => {
-  const params = z.object({ id: z.string().uuid() }).safeParse(req.params);
+  const params = z.object({ id: z.string() }).safeParse(req.params);
 
   if (!params.success) {
     return res.status(404).send({ message: "User not found." });
@@ -98,11 +101,5 @@ users.get("/:id/posts", checkAuthenticated, async (req, res) => {
     return res.status(500).send({ message: "Couldn't get posts." });
   }
 
-  return posts.data;
-});
-
-users.get("/:id/home", checkAuthenticated, async (req, res) => {
-  const posts = await getUserHome(req.user.id);
-
-  return res.send(posts);
+  return res.status(200).send(posts.data);
 });

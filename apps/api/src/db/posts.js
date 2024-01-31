@@ -48,7 +48,7 @@ export async function createQuote(userId, postId, content) {
       `MERGE (p:Post { id: $id })
       ON CREATE SET p.createdAt = datetime(), p.content = $content
       WITH p
-      MATCH (u:User { id: $userId })-[:POSTED]->(p1:Post {id: $postId})
+      MATCH (u:User { id: $userId })-[:POSTED]->(p1:Post { id: $postId })
       MERGE (u)-[:POSTED]->(p)
       MERGE (p)-[:QUOTES]->(p1)
       RETURN { id: p.id, content: p.content } as post;`,
@@ -89,21 +89,23 @@ export async function getPostById(id) {
       } AS post,
       { 
         id: u.id, 
-        firstName: u.firstName, lastName: u.lastName, username: u.username, 
-        image: u.image 
+        firstName: u.firstName,
+        lastName: u.lastName,
+        username: u.username, 
+        email: u.email 
       } AS user, 
       CASE 
         WHEN p1.id IS NOT NULL AND u1.id IS NOT NULL 
         THEN { 
           id: p1.id,
           content: p1.content, 
-          user: { id: u1.id, firstName: u.firstName, lastName: u.lastName, username: u1.username, image: u1.image } 
+          user: { id: u1.id, firstName: u1.firstName, lastName: u1.lastName, username: u1.username, email: u1.email } 
         }
         ELSE NULL 
       END AS quote,
       COLLECT(DISTINCT { 
         reply: { id: p2.id, content: p2.content }, 
-        user: { id: u2.id, firstName: u.firstName, lastName: u.lastName, username: u2.username, image: u2.image }
+        user: { id: u2.id, firstName: u2.firstName, lastName: u2.lastName, username: u2.username, email: u2.email }
       }) AS replies;`,
       {
         id,
@@ -132,10 +134,10 @@ export async function getPostById(id) {
               quotedPost: {
                 id: p1.id,
                 content: p1.content,
-                user: { id: u1.id, firstName: u.firstName, lastName: u.lastName, username: u1.username, image: u1.image } 
+                user: { id: u1.id, firstName: u1.firstName, lastName: u1.lastName, username: u1.username, email: u1.email } 
               }
             },
-            user: { id: u.id, firstName: u.firstName, lastName: u.lastName, username: u.username, image: u.image } 
+            user: { id: u.id, firstName: u.firstName, lastName: u.lastName, username: u.username, email: u.email } 
           }
           ELSE NULL
         END as quote;`,
@@ -154,7 +156,7 @@ export async function getPostById(id) {
 
   session.close();
 
-  const quotedPost = res?.get("quotedPost");
+  const quotedPost = res?.get("quote");
 
   const post = postSchema.parse({ ...res?.get("post"), quotedPost });
 
@@ -179,9 +181,9 @@ export async function getPostByIdWithUser(id) {
       {
         id: p1.id, 
         content: p1.content,
-        user: { id: u1.id, firstName: u.firstName, lastName: u.lastName, username: u.username, image: u.image }
+        user: { id: u1.id, firstName: u1.firstName, lastName: u1.lastName, username: u1.username, email: u1.email }
       } as quotedPost,
-      { id: u.id, firstName: u.firstName, lastName: u.lastName, username: u.username, image: u.image } as user`,
+      { id: u.id, firstName: u.firstName, lastName: u.lastName, username: u.username, email: u.email } as user`,
       {
         id,
       },
@@ -220,7 +222,7 @@ export async function replyToPost(userId, postId, content) {
     MERGE (p1)<-[:POSTED]-(u)
     MERGE (p)<-[:REPLIES]-(p1)
     RETURN { id: p1.id, content: p1.content } as post,
-    { id: u.id, username: u.username, image: u.image } as user;`,
+    { id: u.id, firstName: u.firstName, lastName: u.lastName, username: u.username, email: u.email } as user;`,
       {
         postId,
         userId,
@@ -253,7 +255,7 @@ export async function getPostReplies(postId) {
       `MATCH (p:Post { id: $postId })<-[:REPLIES]-(p1)
       MATCH (p1)<-[:POSTED]-(u)
       RETURN { id: p1.id, content: p1.content } as post,
-      { id: u.id, image: u.image, firstName: u.firstName, lastName: u.lastName, username: u.username } as user;`,
+      { id: u.id, firstName: u.firstName, lastName: u.lastName, username: u.username, email: u.email } as user;`,
       { postId },
     )
   ).records;

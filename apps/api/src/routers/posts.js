@@ -7,14 +7,14 @@ import {
   getPostById,
   getPostReplies,
   replyToPost,
-} from "~/db/posts";
-import { checkAuthenticated } from "~/middlewares/isAuthed";
+} from "~/db/posts.js";
+import { checkAuthenticated } from "~/middlewares/isAuthed.js";
 
 export const posts = Router();
 
 posts.post("/", checkAuthenticated, async (req, res) => {
   const body = z
-    .object({ userId: z.string(), content: z.string().min(1) })
+    .object({ content: z.string().min(1) })
     .safeParse(req.body);
 
   if (!body.success) {
@@ -23,20 +23,21 @@ posts.post("/", checkAuthenticated, async (req, res) => {
       .send({ message: "You have to provide userId and content of the post." });
   }
 
-  const { userId, content } = body.data;
+  const { content } = body.data;
 
-  const result = await createPost(userId, content);
+  const result = await createPost(req.user?.id, content);
 
   if (!result.success) {
     return res.status(500).send({ message: "Something went wront." });
   }
 
-  return result.data;
+  return res.status(200).send(result.data);
 });
 
 posts.post("/quote", checkAuthenticated, async (req, res) => {
   const body = z
     .object({
+      userId: z.string(),
       postId: z.string(),
       content: z.string(),
     })
@@ -49,16 +50,16 @@ posts.post("/quote", checkAuthenticated, async (req, res) => {
   }
 
   const post = await createQuote(
-    req.user.id,
+    body.data.userId,
     body.data.postId,
     body.data.content,
   );
 
-  return res.send(post);
+  return res.status(200).send(post);
 });
 
 posts.get("/:id", checkAuthenticated, async (req, res) => {
-  const params = z.object({ id: z.string().uuid() }).safeParse(req.params);
+  const params = z.object({ id: z.string() }).safeParse(req.params);
 
   if (!params.success) {
     return res.status(404).send({ message: "Post not found." });
@@ -66,11 +67,11 @@ posts.get("/:id", checkAuthenticated, async (req, res) => {
 
   const post = await getPostById(params.data.id);
 
-  return res.send(post);
+  return res.status(200).send(post);
 });
 
 posts.get("/:id/replies", checkAuthenticated, async (req, res) => {
-  const params = z.object({ id: z.string().uuid() }).safeParse(req.params);
+  const params = z.object({ id: z.string() }).safeParse(req.params);
 
   if (!params.success) {
     return res.status(404).send({ message: "Post not found." });
@@ -82,11 +83,11 @@ posts.get("/:id/replies", checkAuthenticated, async (req, res) => {
     return res.status(500).send({ message: "Couldn't get posts." });
   }
 
-  return res.send(replies.data);
+  return res.status(200).send(replies.data);
 });
 
 posts.post("/:id/reply", checkAuthenticated, async (req, res) => {
-  const params = z.object({ id: z.string().uuid() }).safeParse(req.params);
+  const params = z.object({ id: z.string() }).safeParse(req.params);
 
   if (!params.success) {
     return res.status(404).send({ message: "Post not found." });
@@ -110,5 +111,5 @@ posts.post("/:id/reply", checkAuthenticated, async (req, res) => {
     body.data.content,
   );
 
-  return res.send(result);
+  return res.status(200).send(result);
 });

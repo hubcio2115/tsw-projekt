@@ -11,23 +11,23 @@ import { userSchema } from "~/validators/user.js";
 
 const auth = Router();
 
-auth.post(
-  "/login",
-  checkNotAuthenticated,
-  passport.authenticate("local", {
-    failureMessage: true,
-  }),
-);
+auth.post("/login", passport.authenticate("local"), (req, res) => {
+  return !req.user ? res.status(403).send() : res.status(200).send(req.user);
+});
 
-auth.get("/logout", checkAuthenticated, (req, res) => {
+auth.get("/status", (req, res) => {
+  return req.user ? res.send(req.user) : res.sendStatus(401);
+});
+
+auth.get("/logout", (req, res) => {
   req.logOut({ keepSessionInfo: false }, () => {
     return res.sendStatus(200);
   });
 });
 
-auth.post("/register", checkNotAuthenticated, async (req, res) => {
+auth.post("/register", async (req, res) => {
   try {
-    const body = userSchema.safeParse(req.body);
+    const body = userSchema.omit({ id: true }).safeParse(req.body);
 
     if (!body.success || !body.data.password) {
       res.status(401);

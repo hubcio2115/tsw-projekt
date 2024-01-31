@@ -6,22 +6,23 @@ import { userSchema } from "~/validators/user.js";
 import { driver } from "./db.js";
 
 /**
- * @param {string} name
+ * @param {string} username
  */
-export async function getUserByName(name) {
+export async function getUserByName(username) {
   const session = driver.session();
 
   const result = (
     await session.run(
-      `MATCH (u:User { name: $name })
+      `MATCH (u:User { username: $username })
       RETURN {
         id: u.id,
+        email: u.email,
         firstName: u.firstName,
         lastName: u.lastName,
         username: u.username,
-        password: u.password, 
+        password: u.password
       } as user;`,
-      { name },
+      { username },
     )
   ).records.at(0);
 
@@ -43,6 +44,7 @@ export async function getUserById(userId) {
       `MATCH (u:User { id: $userId })
       RETURN {
         id: u.id,
+        email: u.email,
         firstName: u.firstName,
         lastName: u.lastName,
         username: u.username,
@@ -106,8 +108,10 @@ export async function getAllUsers(userId) {
       WHERE u.id <> $userId
       RETURN {
         id: u.id,
-        name: u.name,
-        image: u.image
+        username: u.username,
+        email: u.email,
+        firstName: u.firstName,
+        lastName: u.lastName
       } as user;`,
       { userId },
     )
@@ -173,7 +177,7 @@ export async function isFollowing(userId, targetUserId) {
   const res = (
     await session.run(
       `MATCH (u:User { id: $userId })
-      MATCH (u1:User {id: $targetUserId })
+      MATCH (u1:User { id: $targetUserId })
       WITH u, u1
       OPTIONAL MATCH (u)-[r:FOLLOWS]->(u1)
       RETURN r IS NOT NULL AS isFollowing;`,
@@ -208,13 +212,17 @@ export async function getUserPosts(userId) {
         content: p1.content,
         user: {
           id: u1.id,
-          name: u1.name,
-          image: u1.image
+          email: u1.email,
+          firstName: u1.firstName,
+          lastName: u1.lastName,
+          username: u1.username
         }
       } AS quotedPost, {
         id: u.id,
-        name: u.name,
-        image: u.image
+        email: u.email,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        username: u.username
       } AS user;`,
       {
         userId,
@@ -263,8 +271,10 @@ export async function getUserHome(userId) {
       OPTIONAL MATCH (p1)<-[:POSTED]-(u1:User)
       RETURN {
         id: u1.id,
-        name: u1.name,
-        image: u1.image
+        email: u1.email,
+        firstName: u1.firstName,
+        lastName: u1.lastName,
+        username: u1.username
       } AS user, {
         id: p.id,
         content: p.content
@@ -272,9 +282,11 @@ export async function getUserHome(userId) {
         id: p1.id,
         content: p1.content,
         user: {
-          id: u1.id,
-          name: u1.name,
-          image: u1.image
+          id: u.id,
+          email: u.email,
+          firstName: u.firstName,
+          lastName: u.lastName,
+          username: u.username
         }
       } as quotedPost;`,
       { userId },
@@ -318,7 +330,13 @@ export async function updateUserBio(userId, bio) {
     await session.run(
       `MATCH (u:User { id: $userId })
       SET u.bio = $bio
-      RETURN { id: u.id, name: u.name, image: u.image, bio: u.bio } AS user;`,
+      RETURN {
+        id: u.id,
+        email: u.email,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        username: u.username
+      } AS user; `,
       { userId, bio },
     )
   ).records.at(0);

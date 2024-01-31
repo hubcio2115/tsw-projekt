@@ -4,12 +4,12 @@
  * @param {import('express').NextFunction} next
  */
 export function checkAuthenticated(req, res, next) {
-  const authed = req.isAuthenticated();
-
-  if (!authed) {
+  if (req.method == "OPTIONS") return next();
+  else if (!req.user) {
     res.status(403);
     return res.send({ message: "Unauthorized." });
   }
+
   return next();
 }
 
@@ -19,8 +19,6 @@ export function checkAuthenticated(req, res, next) {
  * @param {import('express').NextFunction} next
  */
 export function checkNotAuthenticated(req, res, next) {
-  const authed = req.isAuthenticated();
-
-  if (!authed) return next();
+  if (!req.user) return next();
   return res.redirect("/");
 }
