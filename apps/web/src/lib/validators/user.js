@@ -1,12 +1,11 @@
 import { z } from "zod";
 
 export const userSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   username: z.string().min(3, "Username has to be longer than 3 characters"),
   email: z.string().email(),
   firstName: z.string(),
   lastName: z.string(),
-  password: z.string().optional(),
   bio: z.string().optional(),
 });
 
@@ -17,9 +16,3 @@ export const authSchema = userSchema.omit({ id: true }).extend({
 });
 
 /** @typedef {z.infer<typeof authSchema>} AuthUser */
-
-export const registerSchema = authSchema.extend({
-  confirmPassword: z.string(),
-});
-
-/** @typedef {z.infer<typeof registerSchema>} RegisterUser */
