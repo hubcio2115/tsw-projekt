@@ -122,7 +122,7 @@ const initials = getInitials(props.poster.firstName, props.poster.lastName);
         />
       </DialogTrigger>
 
-      <DialogContent class="top-[15%]">
+      <DialogContent class="top-[200px]">
         <PostTextArea
           placeholder="What is happening?"
           :quoted-post="{ post, poster }"
