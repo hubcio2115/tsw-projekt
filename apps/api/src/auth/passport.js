@@ -1,4 +1,3 @@
-import { verify } from "argon2";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 
@@ -11,7 +10,7 @@ passport.use(
     if (!user.success)
       return done(null, false, { message: "Authentication failed." });
 
-    const authorized = await verify(user.data.password, password);
+    const authorized = await Bun.password.verify(password, user.data.password);
 
     if (!authorized)
       return done(null, false, { message: "Authentication failed." });

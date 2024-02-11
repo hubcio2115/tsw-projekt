@@ -1,12 +1,7 @@
-import { hash } from "argon2";
 import { Router } from "express";
 
 import passport from "~/auth/passport.js";
 import { createUser } from "~/db/user.js";
-import {
-  checkAuthenticated,
-  checkNotAuthenticated,
-} from "~/middlewares/isAuthed.js";
 import { userSchema } from "~/validators/user.js";
 
 const auth = Router();
@@ -36,7 +31,7 @@ auth.post("/register", async (req, res) => {
       });
     }
 
-    const hashedPassword = await hash(body.data.password);
+    const hashedPassword = await Bun.password.hash(body.data.password);
 
     const newUser = await createUser({
       firstName: body.data.firstName,

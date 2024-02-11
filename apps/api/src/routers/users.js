@@ -1,4 +1,3 @@
-import { hash } from "argon2";
 import { Router } from "express";
 import { z } from "zod";
 
@@ -48,7 +47,7 @@ users.put("/details", checkAuthenticated, async (req, res) => {
     return res.status(403).send({ message: "Not all values were provided." });
   }
 
-  const hashedPassword = await hash(newDetails.data.password);
+  const hashedPassword = await Bun.password.hash(newDetails.data.password);
 
   const newUser = await updateUserById(req.user?.id, {
     ...newDetails.data,
