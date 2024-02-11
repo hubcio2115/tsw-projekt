@@ -1,18 +1,19 @@
 import cors from "cors";
 import express from "express";
 import session from "express-session";
+import { readFileSync } from "node:fs";
 import { createServer } from "node:https";
+import { join as pathJoin } from "node:path";
 import { Server } from "socket.io";
 
 import passport from "~/auth/passport.js";
 
+import { getUserFollowers } from "./db/user.js";
 import { env } from "./env.mjs";
 import auth from "./routers/auth.js";
 import { posts } from "./routers/posts.js";
 import { root } from "./routers/root.js";
 import { users } from "./routers/users.js";
-import { readFileSync } from "node:fs";
-import { getUserFollowers } from "./db/user.js";
 
 const app = express();
 
@@ -48,13 +49,19 @@ app.use("/api/posts", posts);
 app.use("/api/auth", auth);
 app.use("/api", root);
 
+app.use(express.static(pathJoin(__dirname, "static")));
+
+app.get("/", (_, res) => {
+  res.sendFile(`${__dirname}/index.html`);
+});
+
 const server = createServer(
   {
     passphrase: "",
     key: readFileSync("./ssl/private-key.pem"),
     cert: readFileSync("./ssl/certificate.pem"),
   },
-  app
+  app,
 );
 
 const io = new Server(server, {
@@ -71,7 +78,7 @@ followNamespace.on("connection", (socket) => {
 
   socket.on(
     "follow",
-    /** @param {{ sender: string; target: string; senderUsername: string}} message */(
+    /** @param {{ sender: string; target: string; senderUsername: string }} message */(
       message,
     ) => {
       console.debug(message);
@@ -84,7 +91,6 @@ followNamespace.on("connection", (socket) => {
   });
 });
 
-
 const postNamespace = io.of("/post");
 
 postNamespace.on("connection", (socket) => {
@@ -92,13 +98,11 @@ postNamespace.on("connection", (socket) => {
 
   socket.on(
     "post",
-    /** @param {string} userId */ async (
-      userId,
-    ) => {
+    /** @param {string} userId */ async (userId) => {
       const followers = await getUserFollowers(userId);
 
       console.log(followers);
-      
+
       postNamespace.emit("posted", followers);
     },
   );
