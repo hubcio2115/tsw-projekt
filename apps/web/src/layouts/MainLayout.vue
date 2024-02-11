@@ -1,7 +1,7 @@
 <script setup>
 import { useMutation, useQuery } from "@tanstack/vue-query";
 import axios from "axios";
-import { Home, User } from "lucide-vue-next";
+import { Home, SquarePen, User } from "lucide-vue-next";
 import { LogOut, MoreHorizontal, Settings } from "lucide-vue-next";
 import io from "socket.io-client";
 import { onMounted, onUnmounted } from "vue";
@@ -137,11 +137,13 @@ function goToUserProfile(userId) {
 </script>
 
 <template>
-  <div class="mx-auto grid min-h-screen max-w-5xl grid-cols-4 gap-4">
-    <nav class="fixed flex h-full flex-col gap-2 py-4">
+  <div class="mx-auto grid min-h-screen max-w-5xl md:grid-cols-4 md:gap-4">
+    <nav
+      class="fixed bottom-0 flex w-full items-center justify-center gap-2 bg-white py-4 md:h-full md:w-auto md:flex-col md:items-start"
+    >
       <Button
         variant="ghost"
-        class="flex h-12 w-12 rounded-full text-3xl"
+        class="hidden h-12 w-12 rounded-full text-3xl md:flex"
         @click="router.push('/home')"
       >
         𝕐
@@ -158,7 +160,7 @@ function goToUserProfile(userId) {
         @click="router.push('/')"
       >
         <Home :size="24" />
-        Home
+        <span class="hidden md:inline">Home</span>
       </Button>
 
       <Button
@@ -172,7 +174,7 @@ function goToUserProfile(userId) {
         @click="goToUserProfile(store.user?.id)"
       >
         <User :size="24" />
-        Profile
+        <span class="hidden md:inline">Profile</span>
       </Button>
 
       <Button
@@ -186,17 +188,18 @@ function goToUserProfile(userId) {
         @click="router.push('/details')"
       >
         <Settings :size="24" />
-        Settings
+        <span class="hidden md:inline">Settings</span>
       </Button>
 
       <Dialog>
         <DialogTrigger
-          class="justify-center rounded-full bg-blue-400 p-3 text-lg font-bold text-white hover:bg-blue-500 hover:text-white focus-visible:outline-blue-400"
+          class="w-min justify-center rounded-full bg-blue-400 px-3 py-2 text-lg font-bold text-white hover:bg-blue-500 hover:text-white focus-visible:outline-blue-400 md:w-full lg:p-3"
         >
-          Post
+          <span class="hidden md:inline-block">Post</span>
+          <SquarePen class="inline md:hidden" :size="24" />
         </DialogTrigger>
 
-        <DialogContent class="top-[15%]">
+        <DialogContent class="top-[150px]">
           <PostTextArea
             placeholder="What is happening?"
             @on-submit="onSubmit"
@@ -208,7 +211,7 @@ function goToUserProfile(userId) {
         <DropdownMenuTrigger as-child>
           <Button
             variant="ghost"
-            class="mb-0 mt-auto justify-start rounded-full px-4 py-8"
+            class="mb-0 mt-auto hidden justify-start rounded-full px-2 py-8 md:flex lg:px-4"
           >
             <Avatar class="h-10 w-10">
               <AvatarImage alt="profile-picture" />
@@ -238,9 +241,12 @@ function goToUserProfile(userId) {
       </DropdownMenu>
     </nav>
 
-    <RouterView :key="route.fullPath" class="col-start-2" />
+    <RouterView
+      :key="route.fullPath"
+      class="col-span-2 mb-[76px] md:col-start-2 md:mb-0"
+    />
 
-    <ul class="flex flex-col items-center pt-4">
+    <ul class="items-left hidden flex-col pt-4 md:flex">
       <Spinner v-if="fetchingUsers" />
 
       <template v-else-if="users">
