@@ -185,7 +185,7 @@ const initials = $computed(() =>
 </script>
 
 <template>
-  <div class="col-span-2 col-start-2 flex flex-col border-x border-x-secondary">
+  <div class="flex flex-col border-x border-x-secondary">
     <Head>
       <Title>
         {{ userProfile?.firstName }} {{ userProfile?.lastName }} @{{

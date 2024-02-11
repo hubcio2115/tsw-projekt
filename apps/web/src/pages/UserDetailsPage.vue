@@ -52,7 +52,6 @@ const onSubmit =
 
 <template>
   <RegisterForm
-    class="col-span-2"
     :default-values="{ ...store.user, password: '' }"
     title="User Details"
     description="Change user details here."

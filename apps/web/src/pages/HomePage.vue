@@ -82,7 +82,7 @@ function handleOnBadgeClick() {
 
 <template>
   <div
-    class="col-span-2 col-start-2 flex flex-col items-center justify-center border-x border-x-secondary"
+    class="flex flex-col items-center justify-center border-x border-x-secondary"
   >
     <Head>
       <Title>Home / 𝕐</Title>

@@ -148,7 +148,7 @@ function onSubmit(content) {
 </script>
 
 <template>
-  <div class="col-span-2 col-start-2 flex flex-col border-x border-x-secondary">
+  <div class="flex flex-col border-x border-x-secondary">
     <div class="flex items-center">
       <Button variant="ghost" class="rounded-full px-2" @click="router.back()">
         <ArrowLeft :size="20" />
