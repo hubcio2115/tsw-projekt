@@ -138,7 +138,7 @@ function goToUserProfile(userId) {
 
 <template>
   <div class="mx-auto grid min-h-screen max-w-5xl grid-cols-4 gap-4">
-    <nav class="flex h-full flex-col gap-2 py-4">
+    <nav class="fixed flex h-full flex-col gap-2 py-4">
       <Button
         variant="ghost"
         class="flex h-12 w-12 rounded-full text-3xl"
@@ -238,7 +238,7 @@ function goToUserProfile(userId) {
       </DropdownMenu>
     </nav>
 
-    <RouterView :key="route.fullPath" />
+    <RouterView :key="route.fullPath" class="col-start-2" />
 
     <ul class="flex flex-col items-center pt-4">
       <Spinner v-if="fetchingUsers" />
