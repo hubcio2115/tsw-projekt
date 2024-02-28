@@ -1,16 +1,14 @@
 <script setup>
-import { useQuery } from "@tanstack/vue-query";
+import { useInfiniteQuery } from "@tanstack/vue-query";
+import { useIntersectionObserver } from "@vueuse/core";
 import axios from "axios";
-import { Loader2, RotateCw } from "lucide-vue-next";
 import { io } from "socket.io-client";
-import { onMounted, onUnmounted } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 import { z } from "zod";
 
 import PostComponent from "~/components/PostComponent.vue";
 import Spinner from "~/components/ui/Spinner.vue";
 import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
-import { env } from "~/env.mjs";
 import { postSchema } from "~/lib/validators/post.js";
 import { userSchema } from "~/lib/validators/user";
 import { useAuthStore } from "~/store/authStore";
@@ -20,10 +18,10 @@ const store = useAuthStore();
 /** @type {ReturnType<typeof $ref<import('socket.io-client').Socket | null>>} */
 let postSocket = $ref(null);
 
-let areNewPostsAvailable = $ref(false);
+let numberOfNewPosts = $ref(0);
 
 onMounted(() => {
-  postSocket = io(`${env.VITE_API_BASE_URL}/post`);
+  postSocket = io(`${import.meta.env.VITE_API_BASE_URL}/post`);
 
   postSocket.on("connection", () => {
     console.log("Connected to /post.");
@@ -35,7 +33,7 @@ onMounted(() => {
       const isUserInFollowers = userIds.some((id) => id === store.user?.id);
 
       if (isUserInFollowers) {
-        areNewPostsAvailable = true;
+        numberOfNewPosts += 1;
       }
     },
   );
@@ -45,38 +43,100 @@ onUnmounted(() => {
   postSocket?.disconnect();
 });
 
+let newestPostCreatedAt = $ref(new Date());
+let oldestPostCreatedAt = $ref(new Date());
+
 const {
-  data: posts,
+  data,
+  fetchNextPage,
+  fetchPreviousPage,
+  isFetchingNextPage,
+  isFetchingPreviousPage,
   isPending,
-  isFetching,
-  refetch,
-} = useQuery({
+} = useInfiniteQuery({
   queryKey: ["home", "posts"],
-  queryFn: async () => {
-    const res = await axios.get(`${env.VITE_API_BASE_URL}/api/home`, {
-      withCredentials: true,
+  queryFn: async ({ pageParam: [pageParam, earlierThan] }) => {
+    const params = new URLSearchParams({
+      earlierThan: earlierThan.toString(),
+      date: pageParam.toISOString(),
     });
 
-    if (res.status >= 200 || res.status <= 299) {
-      const data = await res.data;
+    const res = await axios.get(
+      `${import.meta.env.VITE_API_BASE_URL}/api/posts/home?${params.toString()}`,
+      {
+        withCredentials: true,
+      },
+    );
 
-      return z
+    if (res.status >= 200 || res.status <= 299) {
+      const data = z
         .array(
           z.object({
             user: userSchema,
             post: postSchema,
           }),
         )
-        .parse(data);
+        .parse(res.data);
+
+      const firstPostCreatedAt = new Date(data[0]?.post?.createdAt);
+      const lastPostCreatedAt = new Date(
+        data[data.length - 1]?.post?.createdAt,
+      );
+
+      if (firstPostCreatedAt > newestPostCreatedAt) {
+        newestPostCreatedAt = firstPostCreatedAt;
+      }
+
+      if (lastPostCreatedAt < oldestPostCreatedAt) {
+        oldestPostCreatedAt = lastPostCreatedAt;
+      }
+
+      if (earlierThan) {
+        numberOfNewPosts -= data.length;
+      }
+
+      return data;
     }
 
     return null;
   },
+  initialPageParam: [newestPostCreatedAt, false],
+  getNextPageParam: (lastPage) => {
+    if (lastPage?.length !== 10) return;
+
+    return [oldestPostCreatedAt, false];
+  },
+  getPreviousPageParam: () => {
+    return [newestPostCreatedAt, true];
+  },
+  staleTime: Infinity,
 });
 
-function handleOnBadgeClick() {
-  refetch();
-  areNewPostsAvailable = false;
+const computedData = $computed(() => {
+  return data.value?.pages.flat().filter(Boolean);
+});
+
+/** @type {ReturnType<typeof ref<HTMLElement | null>>} */
+const intersectionForNextPages = ref(null);
+useIntersectionObserver(intersectionForNextPages, ([{ isIntersecting }]) => {
+  if (isIntersecting) {
+    fetchNextPage();
+  }
+});
+
+/** @type {ReturnType<typeof ref<HTMLElement | null>>} */
+const intersectionForPreviousPages = ref(null);
+useIntersectionObserver(
+  intersectionForPreviousPages,
+  ([{ isIntersecting }]) => {
+    if (isIntersecting && numberOfNewPosts > 0) {
+      fetchPreviousPage();
+    }
+  },
+);
+
+function handleBadgeClick() {
+  numberOfNewPosts = 0;
 }
 </script>
 
@@ -84,51 +144,51 @@ function handleOnBadgeClick() {
   <div
     class="flex flex-col items-center justify-center border-x border-x-secondary"
   >
-    <Head>
-      <Title>Home / 𝕐</Title>
-    </Head>
-
     <div class="flex h-full w-full flex-col">
       <Badge
-        v-if="areNewPostsAvailable"
+        v-if="numberOfNewPosts"
         class="absolute left-[calc(50%-80px)] top-2 mx-auto w-40 cursor-pointer fade-in fade-out"
-        @click="handleOnBadgeClick"
+        @click="handleBadgeClick"
       >
-        New post available <RotateCw class="ml-2" :size="14" />
+        There {{ numberOfNewPosts > 1 ? "are" : "is" }}
+        {{ numberOfNewPosts }} new post{{ numberOfNewPosts > 1 ? "s" : "" }}
       </Badge>
 
-      <Spinner v-if="isPending || isFetching" />
+      <Spinner v-if="isPending" />
 
       <div
-        v-else-if="!posts"
+        v-else-if="!data?.pages"
         class="flex h-full flex-col items-center justify-center"
       >
         <h2 class="text-xl font-bold">Gosh something went wrong!</h2>
         <p>There is probably more info in the console.</p>
         <p>
-          But if you don't want to do that try refetching in couple of minutes.
+          But if you don't want to do that try refreshing in couple of minutes.
         </p>
-
-        <Button variant="ghost" @click="refetch">
-          <Loader2 />
-        </Button>
       </div>
 
       <div
-        v-else-if="posts.length === 0"
+        v-else-if="computedData.length === 0"
         class="flex h-full flex-col items-center justify-center"
       >
         <h2 class="text-xl font-bold">Wow nothing to see here?</h2>
         <p>Try following someone, every new post will show up here!</p>
       </div>
 
-      <PostComponent
-        v-for="{ post, user: poster } in posts"
-        v-else
-        :key="post?.id"
-        :post="post"
-        :poster="poster"
-      />
+      <template v-else>
+        <div ref="intersectionForPreviousPages" />
+        <Spinner v-if="isFetchingPreviousPage" />
+
+        <PostComponent
+          v-for="{ post, user: poster } in computedData"
+          :key="post.id"
+          :post="post"
+          :poster="poster"
+        />
+
+        <Spinner v-if="isFetchingNextPage" />
+        <div ref="intersectionForNextPages" />
+      </template>
     </div>
   </div>
 </template>

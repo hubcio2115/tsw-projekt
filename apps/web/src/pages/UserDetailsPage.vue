@@ -4,7 +4,6 @@ import { createSubmitHandler } from "@vue-hooks-form/core";
 import axios from "axios";
 
 import RegisterForm from "~/components/RegisterForm.vue";
-import { env } from "~/env.mjs";
 import { userSchema } from "~/lib/validators/user";
 import { useAuthStore } from "~/store/authStore";
 
@@ -17,7 +16,7 @@ const { mutate: detailsMutation } =
     mutationKey: ["user", "update"],
     mutationFn: async (newUser) => {
       const res = await axios.put(
-        `${env.VITE_API_BASE_URL}/api/users/details`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/users/details`,
         newUser,
         { withCredentials: true },
       );

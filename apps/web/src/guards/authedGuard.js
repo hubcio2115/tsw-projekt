@@ -12,8 +12,6 @@ export const isAuthed = (_to, _from, next) => {
 export const isUnauthed = (_to, _from, next) => {
   const store = useAuthStore();
 
-  console.log(store.user);
-
   if (!store.user) next();
   else next("/home");
 };

@@ -19,7 +19,6 @@ import {
 } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { env } from "~/env.mjs";
 import { cn } from "~/lib/utils";
 import { authSchema, userSchema } from "~/lib/validators/user";
 import { useAuthStore } from "~/store/authStore";
@@ -47,7 +46,7 @@ const onSubmit = createSubmitHandler(async () => {
   };
 
   const res = await axios.post(
-    `${env.VITE_API_BASE_URL}/api/auth/login`,
+    `${import.meta.env.VITE_API_BASE_URL}/api/auth/login`,
     data,
     {
       withCredentials: true,

@@ -18,7 +18,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import { env } from "~/env.mjs";
 import { cn, getInitials } from "~/lib/utils";
 import { postSchema } from "~/lib/validators/post";
 import { userSchema } from "~/lib/validators/user";
@@ -36,7 +35,7 @@ let followSocket = $ref(null);
 let postSocket = $ref(null);
 
 onMounted(() => {
-  followSocket = io(`${env.VITE_API_BASE_URL}/follow`);
+  followSocket = io(`${import.meta.env.VITE_API_BASE_URL}/follow`);
 
   followSocket.on("connection", () => {
     console.log("Connected to /follow.");
@@ -49,7 +48,7 @@ onMounted(() => {
     }
   });
 
-  postSocket = io(`${env.VITE_API_BASE_URL}/post`);
+  postSocket = io(`${import.meta.env.VITE_API_BASE_URL}/post`);
 
   postSocket.on("connection", () => {
     console.log("Connected to /post.");
@@ -64,9 +63,12 @@ onUnmounted(() => {
 const { data: users, isPending: fetchingUsers } = useQuery({
   queryKey: ["users"],
   queryFn: async () => {
-    const res = await axios.get(`${env.VITE_API_BASE_URL}/api/users`, {
-      withCredentials: true,
-    });
+    const res = await axios.get(
+      `${import.meta.env.VITE_API_BASE_URL}/api/users`,
+      {
+        withCredentials: true,
+      },
+    );
 
     if (res.status >= 200 || res.status <= 299) {
       const users = z.array(userSchema).parse(res.data);
@@ -79,9 +81,12 @@ const { data: users, isPending: fetchingUsers } = useQuery({
 });
 
 async function signOut() {
-  const res = await axios.get(`${env.VITE_API_BASE_URL}/api/auth/logout`, {
-    withCredentials: true,
-  });
+  const res = await axios.get(
+    `${import.meta.env.VITE_API_BASE_URL}/api/auth/logout`,
+    {
+      withCredentials: true,
+    },
+  );
 
   if (res.status >= 200 || res.status <= 299) {
     store.unsetUser();
@@ -96,7 +101,7 @@ const postMutation =
     mutationKey: ["post", "create"],
     mutationFn: async (content) => {
       const res = await axios.post(
-        `${env.VITE_API_BASE_URL}/api/posts`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/posts`,
         { content },
         { withCredentials: true },
       );
@@ -246,7 +251,9 @@ function goToUserProfile(userId) {
       class="col-span-2 mb-[76px] md:col-start-2 md:mb-0"
     />
 
-    <ul class="items-left hidden flex-col pt-4 md:flex">
+    <ul
+      class="items-left hidden flex-col pt-4 md:sticky md:top-0 md:col-start-4 md:flex md:h-screen"
+    >
       <Spinner v-if="fetchingUsers" />
 
       <template v-else-if="users">

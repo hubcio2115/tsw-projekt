@@ -6,6 +6,7 @@ import {
   createQuote,
   getPostById,
   getPostReplies,
+  getPostsForHome,
   replyToPost,
 } from "~/db/posts.js";
 import { checkAuthenticated } from "~/middlewares/isAuthed.js";
@@ -13,9 +14,7 @@ import { checkAuthenticated } from "~/middlewares/isAuthed.js";
 export const posts = Router();
 
 posts.post("/", checkAuthenticated, async (req, res) => {
-  const body = z
-    .object({ content: z.string().min(1) })
-    .safeParse(req.body);
+  const body = z.object({ content: z.string().min(1) }).safeParse(req.body);
 
   if (!body.success) {
     return res
@@ -58,16 +57,39 @@ posts.post("/quote", checkAuthenticated, async (req, res) => {
   return res.status(200).send(post);
 });
 
-posts.get("/:id", checkAuthenticated, async (req, res) => {
-  const params = z.object({ id: z.string() }).safeParse(req.params);
+posts.get("/home", checkAuthenticated, async (req, res) => {
+  const date = z.string().datetime().safeParse(req.query["date"]);
 
-  if (!params.success) {
-    return res.status(404).send({ message: "Post not found." });
+  if (!date.success) {
+    return res.status(403).send({
+      message: "Wrong format of datetime for date",
+    });
   }
 
-  const post = await getPostById(params.data.id);
+  let earlierThan = true;
+  if (req.query["earlierThan"] === "false") {
+    earlierThan = false;
+  }
 
-  return res.status(200).send(post);
+  const posts = await getPostsForHome(req.user.id, earlierThan, date.data);
+
+  return res.status(200).send(posts);
+});
+
+posts.get("/:id", checkAuthenticated, async (req, res) => {
+  try {
+    const params = z.object({ id: z.string() }).safeParse(req.params);
+
+    if (!params.success) {
+      return res.status(404).send({ message: "Post not found." });
+    }
+
+    const post = await getPostById(params.data.id);
+
+    return res.status(200).send(post);
+  } catch (e) {
+    return res.status(500).send({ message: "Something went wrong." });
+  }
 });
 
 posts.get("/:id/replies", checkAuthenticated, async (req, res) => {

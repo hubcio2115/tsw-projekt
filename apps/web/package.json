@@ -10,7 +10,6 @@
     "lint": "eslint . --max-warnings 0"
   },
   "dependencies": {
-    "@t3-oss/env-core": "^0.7.3",
     "@tanstack/vue-query": "^5.17.8",
     "@tanstack/vue-query-devtools": "^5.17.8",
     "@trivago/prettier-plugin-sort-imports": "^4.3.0",

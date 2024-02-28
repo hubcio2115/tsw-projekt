@@ -5,14 +5,13 @@ import axios from "axios";
 import LoginForm from "~/components/LoginForm.vue";
 import RegisterForm from "~/components/RegisterForm.vue";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { env } from "~/env.mjs";
 
 const onSubmit =
   /** @type {typeof createSubmitHandler<import("~/lib/validators/user").AuthUser>}*/ (
     createSubmitHandler
   )(async (data) => {
     const res = await axios.post(
-      `${env.VITE_API_BASE_URL}/api/auth/register`,
+      `${import.meta.env.VITE_API_BASE_URL}/api/auth/register`,
       data,
       { withCredentials: true },
     );

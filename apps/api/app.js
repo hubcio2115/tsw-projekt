@@ -8,12 +8,12 @@ import { Server } from "socket.io";
 
 import passport from "~/auth/passport.js";
 
-import { getUserFollowers } from "./db/user.js";
-import { env } from "./env.mjs";
-import auth from "./routers/auth.js";
-import { posts } from "./routers/posts.js";
-import { root } from "./routers/root.js";
-import { users } from "./routers/users.js";
+import { getUserFollowers } from "./src/db/user.js";
+import { env } from "./src/env.mjs";
+import auth from "./src/routers/auth.js";
+import { posts } from "./src/routers/posts.js";
+import { root } from "./src/routers/root.js";
+import { users } from "./src/routers/users.js";
 
 const app = express();
 
@@ -49,11 +49,8 @@ app.use("/api/posts", posts);
 app.use("/api/auth", auth);
 app.use("/api", root);
 
-app.use(express.static(pathJoin(__dirname, "static")));
-
-app.get("/", (_, res) => {
-  res.sendFile(`${__dirname}/index.html`);
-});
+const staticPath = pathJoin(__dirname, "static");
+app.use(express.static(staticPath));
 
 const server = createServer(
   {

@@ -5,6 +5,7 @@ import { userSchema } from "./user.js";
 export const postSchema = z.object({
   id: z.string(),
   content: z.string().min(1, "Post should have at least 1 character."),
+  createdAt: z.string().optional(),
   quotedPost: z
     .object({
       id: z.string(),

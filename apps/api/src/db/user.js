@@ -293,68 +293,6 @@ export async function getUserPosts(userId) {
   return parsedPosts;
 }
 
-/**
- * @param {string} userId
- */
-export async function getUserHome(userId) {
-  const session = driver.session();
-
-  const records = (
-    await session.run(
-      `MATCH (u:User {id: $userId })-[f:FOLLOWS]->(u1:User)
-      MATCH (u1)-[:POSTED]->(p:Post)
-      WHERE p.createdAt >= f.createdAt
-      OPTIONAL MATCH (p)-[:QUOTES]->(p1:Post)
-      OPTIONAL MATCH (p1)<-[:POSTED]-(u1:User)
-      RETURN {
-        id: u1.id,
-        email: u1.email,
-        firstName: u1.firstName,
-        lastName: u1.lastName,
-        username: u1.username
-      } AS user, {
-        id: p.id,
-        content: p.content
-      } AS post, {
-        id: p1.id,
-        content: p1.content,
-        user: {
-          id: u.id,
-          email: u.email,
-          firstName: u.firstName,
-          lastName: u.lastName,
-          username: u.username
-        }
-      } as quotedPost;`,
-      { userId },
-    )
-  ).records;
-
-  session.close();
-
-  const data = records.map((record) => {
-    const quotedPost = record.get("quotedPost");
-
-    return {
-      user: record.get("user"),
-      post: {
-        ...record.get("post"),
-        quotedPost: quotedPost.id !== null ? quotedPost : null,
-      },
-    };
-  });
-
-  const posts = z
-    .array(
-      z.object({
-        user: userSchema,
-        post: postSchema,
-      }),
-    )
-    .parse(data);
-
-  return posts;
-}
 
 /**
  * @param {string} userId
@@ -384,7 +322,6 @@ export async function updateUserBio(userId, bio) {
 
   return user;
 }
-
 
 /**
  * @param {string} userId

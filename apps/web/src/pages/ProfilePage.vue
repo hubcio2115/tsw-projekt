@@ -13,7 +13,6 @@ import Spinner from "~/components/ui/Spinner.vue";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
-import { env } from "~/env.mjs";
 import { cn, getInitials } from "~/lib/utils";
 import { postSchema } from "~/lib/validators/post";
 import { userSchema } from "~/lib/validators/user";
@@ -29,7 +28,7 @@ const { data: userProfile, refetch: refetchProfile } = useQuery({
   queryKey: ["user", route.params.id],
   queryFn: async ({ queryKey: [_, userId] }) => {
     const res = await axios.get(
-      `${env.VITE_API_BASE_URL}/api/users/${userId}`,
+      `${import.meta.env.VITE_API_BASE_URL}/api/users/${userId}`,
       { withCredentials: true },
     );
 
@@ -54,7 +53,7 @@ watch(userProfile, () => {
 let socket = $ref(null);
 
 onMounted(() => {
-  socket = io(`${env.VITE_API_BASE_URL}/follow`);
+  socket = io(`${import.meta.env.VITE_API_BASE_URL}/follow`);
 });
 
 onUnmounted(() => {
@@ -73,7 +72,7 @@ const { mutate: updateBio, isPending: isUpdateBioPending } =
     mutationKey: ["bio"],
     mutationFn: async (bio) => {
       const res = await axios.patch(
-        `${env.VITE_API_BASE_URL}/api/users/${userProfile.value?.id}/bio`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/users/${userProfile.value?.id}/bio`,
         { bio },
         { withCredentials: true },
       );
@@ -102,7 +101,7 @@ let isFollowing = $ref(false);
 
 onMounted(async () => {
   const res = await axios.get(
-    `${env.VITE_API_BASE_URL}/api/users/${route.params.id}/isFollowing`,
+    `${import.meta.env.VITE_API_BASE_URL}/api/users/${route.params.id}/isFollowing`,
     { withCredentials: true },
   );
 
@@ -122,7 +121,7 @@ const { mutate: followUser, isPending: isFollowPending } =
     mutationKey: ["follow", user.value?.id, userProfile.value?.id],
     mutationFn: async () => {
       const res = await axios.post(
-        `${env.VITE_API_BASE_URL}/api/users/${userProfile.value?.id}/follow`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/users/${userProfile.value?.id}/follow`,
         {},
         { withCredentials: true },
       );
@@ -151,7 +150,7 @@ const { data: posts } = useQuery({
   queryKey: ["posts", route.params.id],
   queryFn: async () => {
     const res = await axios.get(
-      `${env.VITE_API_BASE_URL}/api/users/${route.params.id}/posts`,
+      `${import.meta.env.VITE_API_BASE_URL}/api/users/${route.params.id}/posts`,
       { withCredentials: true },
     );
 

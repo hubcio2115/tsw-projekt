@@ -284,3 +284,71 @@ export async function getPostReplies(postId) {
 
   return parsedPosts;
 }
+
+/**
+ * @param {string} userId
+ * @param {boolean} earlierThan
+ * @param {string} date
+ */
+export async function getPostsForHome(userId, earlierThan, date) {
+  const session = driver.session();
+
+  const query = await session.run(
+    `MATCH (u:User {id: $userId })-[f:FOLLOWS]->(u1:User)
+      MATCH (u1)-[:POSTED]->(p:Post)
+      WHERE datetime($date) ${earlierThan ? "<" : ">"} p.createdAt
+      OPTIONAL MATCH (p)-[:QUOTES]->(p1:Post)
+      OPTIONAL MATCH (p1)<-[:POSTED]-(u1:User)
+      RETURN {
+        id: u1.id,
+        email: u1.email,
+        firstName: u1.firstName,
+        lastName: u1.lastName,
+        username: u1.username
+      } AS user, {
+        id: p.id,
+        content: p.content,
+        createdAt: apoc.temporal.format(p.createdAt, 'iso_instant')
+      } AS post, {
+        id: p1.id,
+        content: p1.content,
+        user: {
+          id: u.id,
+          email: u.email,
+          firstName: u.firstName,
+          lastName: u.lastName,
+          username: u.username
+        }
+      } as quotedPost
+      ORDER BY post.createdAt DESC
+      LIMIT 10;`,
+    { userId, date },
+  );
+
+  session.close();
+
+  const records = query.records;
+
+  const data = records.map((record) => {
+    const quotedPost = record.get("quotedPost");
+
+    return {
+      user: record.get("user"),
+      post: {
+        ...record.get("post"),
+        quotedPost: quotedPost.id !== null ? quotedPost : null,
+      },
+    };
+  });
+
+  const posts = z
+    .array(
+      z.object({
+        user: userSchema,
+        post: postSchema,
+      }),
+    )
+    .parse(data);
+
+  return posts;
+}

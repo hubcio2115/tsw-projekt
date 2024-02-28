@@ -11,7 +11,6 @@ import PostComponent from "~/components/PostComponent.vue";
 import PostTextArea from "~/components/PostTextArea.vue";
 import Spinner from "~/components/ui/Spinner.vue";
 import { Button } from "~/components/ui/button";
-import { env } from "~/env.mjs";
 import { postSchema } from "~/lib/validators/post";
 import { userSchema } from "~/lib/validators/user";
 import { useAuthStore } from "~/store/authStore";
@@ -26,7 +25,7 @@ const { data: userProfile, isPending: isUserProfilePending } = useQuery({
   queryKey: ["userProfile", route.params.id],
   queryFn: async ({ queryKey: [_, userId] }) => {
     const res = await axios.get(
-      `${env.VITE_API_BASE_URL}/api/users/${userId}`,
+      `${import.meta.env.VITE_API_BASE_URL}/api/users/${userId}`,
       { withCredentials: true },
     );
 
@@ -44,7 +43,7 @@ const { data: postData, isPending: isPostPending } = useQuery({
   queryKey: ["post", route.params.postId],
   queryFn: async ({ queryKey: [_, postId] }) => {
     const res = await axios.get(
-      `${env.VITE_API_BASE_URL}/api/posts/${postId}`,
+      `${import.meta.env.VITE_API_BASE_URL}/api/posts/${postId}`,
       { withCredentials: true },
     );
 
@@ -80,7 +79,7 @@ const { data: replies, refetch: refetchReplies } = useQuery({
   queryKey: ["replies", route.params.postId],
   queryFn: async ({ queryKey: [_, postId] }) => {
     const res = await axios.get(
-      `${env.VITE_API_BASE_URL}/api/posts/${postId}/replies`,
+      `${import.meta.env.VITE_API_BASE_URL}/api/posts/${postId}/replies`,
       { withCredentials: true },
     );
 
@@ -108,7 +107,7 @@ const replyMutation =
     mutationKey: ["reply", "create"],
     mutationFn: async ([userId, postId, content]) => {
       const res = await axios.post(
-        `${env.VITE_API_BASE_URL}/api/posts/${postId}/reply`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/posts/${postId}/reply`,
         { userId, content, postId },
         { withCredentials: true },
       );

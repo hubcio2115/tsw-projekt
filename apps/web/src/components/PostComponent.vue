@@ -5,14 +5,13 @@ import { PenLine } from "lucide-vue-next";
 import { useRouter } from "vue-router";
 
 import { Dialog, DialogContent, DialogTrigger } from "~/components/ui/dialog";
-import { env } from "~/env.mjs";
 import { getInitials } from "~/lib/utils";
 import { postSchema } from "~/lib/validators/post";
 import { userSchema } from "~/lib/validators/user";
 
 import PostTextArea from "./PostTextArea.vue";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import QuoteComponent from "./QuoteComponent.vue";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 const router = useRouter();
 
@@ -45,7 +44,7 @@ const { mutate: createQuote } =
     mutationKey: ["quote", "create"],
     mutationFn: async ([userId, postId, content]) => {
       const res = await axios.post(
-        `${env.VITE_API_BASE_URL}/api/posts/quote`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/posts/quote`,
         { userId, postId, content },
         { withCredentials: true },
       );
