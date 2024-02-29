@@ -52,6 +52,10 @@ app.use("/api", root);
 const staticPath = pathJoin(__dirname, "static");
 app.use(express.static(staticPath));
 
+app.get("*", (_, res) => {
+  res.sendFile(pathJoin(staticPath, "index.html"));
+});
+
 const server = createServer(
   {
     passphrase: "",
